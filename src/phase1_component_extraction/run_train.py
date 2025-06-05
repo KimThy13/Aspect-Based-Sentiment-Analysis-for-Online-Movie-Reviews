@@ -7,29 +7,30 @@ import os
 def main():
     preprocessed_path = "data/preprocessed/component"
 
-    # Nếu dataset đã preprocess/tokenize, thì load trực tiếp
+    # If the dataset has already been preprocessed and tokenized, load it from disk
     if os.path.exists(preprocessed_path):
         dataset = load_from_disk(preprocessed_path)
         print("✅ Loaded preprocessed dataset from disk.")
     else:
-        # Load raw dataset từ CSV đã split
+        # Load the raw dataset (should already be split into train/validation/test)
         raw_dataset = load_dataset_from_folder("data/processed")
 
-        # Preprocess (tạo input_text và target_text)
+        # Step 1: Preprocess to create input_text and target_text
         processed_dataset = raw_dataset.map(preprocess_component, batched=True)
 
-        # Tokenize (chuyển sang input_ids, labels,...)
+        # Step 2: Tokenize the input and target text into input_ids and labels
         tokenized_dataset = processed_dataset.map(tokenize_component, batched=True)
 
-        # Save để tái sử dụng lần sau
+        # Save the tokenized dataset to disk for future use
         tokenized_dataset.save_to_disk(preprocessed_path)
         print("✅ Preprocessed and saved dataset to disk.")
 
         dataset = tokenized_dataset
 
-    # Huấn luyện model
+    # Initialize the trainer with the dataset and start training the model
     trainer = ComponentTrainer(dataset)
     trainer.train()
 
+# Entry point of the script
 if __name__ == "__main__":
     main()

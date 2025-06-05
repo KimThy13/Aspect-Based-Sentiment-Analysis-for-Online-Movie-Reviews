@@ -4,19 +4,22 @@ import evaluate
 
 def evaluate_component_outputs(predictions, references):
     """
-    Đánh giá component extraction dạng sinh câu.
-    predictions: List[str] - Các câu được sinh
-    references: List[str] - Các câu thật (ground truth)
+    Evaluate component extraction outputs (sentence generation task).
+    Args:
+        predictions (List[str]): Generated sentences by model.
+        references (List[str]): Ground truth sentences.
+    Returns:
+        dict: Dictionary of ROUGE scores and exact match accuracy.
     """
     rouge = evaluate.load("rouge")
 
-    # Tính ROUGE
+    # Compute ROUGE scores between predictions and references
     rouge_scores = rouge.compute(predictions=predictions, references=references)
 
-    # Tính Exact Match
+    # Calculate exact match accuracy (strict string equality)
     exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
 
-    # In kết quả
+    # Print evaluation results
     print("\n==== Component Sentence Extraction Evaluation ====")
     for k, v in rouge_scores.items():
         print(f"{k}: {v:.4f}")
@@ -24,14 +27,25 @@ def evaluate_component_outputs(predictions, references):
 
     return {**rouge_scores, "exact_match": exact_match_acc}
 
-# Hàm đánh giá kết quả đầu ra mô hình ABSA
+
 def evaluate_absa_outputs(target_texts, predicted_texts):
-    # Load ROUGE metric
+    """
+    Evaluate ABSA outputs by comparing generated text to target text.
+    Uses ROUGE, F1, accuracy, and exact match metrics on extracted parts.
+    Args:
+        target_texts (List[str]): Ground truth formatted strings.
+        predicted_texts (List[str]): Model-generated formatted strings.
+    Returns:
+        dict: Dictionary of evaluation metrics.
+    """
     rouge = evaluate.load("rouge")
     rouge_results = rouge.compute(predictions=predicted_texts, references=target_texts)
 
-    # Hàm tách từng thành phần
     def extract_parts(text):
+        """
+        Parse text into dictionary of aspect, aspect_term, opinion_term, sentiment.
+        Return None if parsing fails.
+        """
         try:
             return {
                 'aspect': re.search(r'aspect:\s*(.*?),', text).group(1).strip(),
@@ -42,29 +56,29 @@ def evaluate_absa_outputs(target_texts, predicted_texts):
         except:
             return None
 
-    # Tách và lọc những câu lỗi không parse được
+    # Extract parts from target and predicted texts, filter out parse errors
     true_parts = [extract_parts(t) for t in target_texts]
     pred_parts = [extract_parts(p) for p in predicted_texts]
     true_parts, pred_parts = zip(*[(t, p) for t, p in zip(true_parts, pred_parts) if t and p])
 
-    # Tính F1 cho từng trường
+    # Calculate F1 score for each field
     fields = ['aspect', 'aspect_term', 'opinion_term', 'sentiment']
     f1_scores = {
         f"{f}_f1": f1_score([t[f] for t in true_parts], [p[f] for p in pred_parts], average='micro')
         for f in fields
     }
 
-    # Accuracy và Exact Match
+    # Calculate accuracy for aspect and sentiment fields and overall exact match accuracy
     other_metrics = {
         "aspect_acc": accuracy_score([t['aspect'] for t in true_parts], [p['aspect'] for p in pred_parts]),
         "sentiment_acc": accuracy_score([t['sentiment'] for t in true_parts], [p['sentiment'] for p in pred_parts]),
         "exact_match_acc": sum(t == p for t, p in zip(true_parts, pred_parts)) / len(true_parts)
     }
 
-    # Gộp lại tất cả kết quả
+    # Combine all metrics into one dictionary
     results = {**rouge_results, **f1_scores, **other_metrics}
 
-    # In kết quả
+    # Print all evaluation results
     print("\n==== Evaluation Results ====")
     for k, v in results.items():
         print(f"{k}: {v:.4f}")
