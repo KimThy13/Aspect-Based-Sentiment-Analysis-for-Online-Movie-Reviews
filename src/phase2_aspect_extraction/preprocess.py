@@ -5,23 +5,23 @@ import torch
 tokenizer = T5Tokenizer.from_pretrained("t5-base")
 model = T5ForConditionalGeneration.from_pretrained("t5-base")
 
+
 def preprocess_absa(examples):
-    """
-    Chuẩn bị input_text và target_text từ bộ dữ liệu ABSA phase 2.
-    Dùng cho task Seq2Seq để huấn luyện mô hình như T5.
-    """
+    # Tạo input_text từ câu
+    ### Với mỗi câu, thêm prefix "Extract aspect, sentiment, and opinion term: " để hướng mô hình làm đúng nhiệm vụ.
     inputs = ["Extract aspect, sentiment, and opinion term: " + str(sentence) for sentence in examples["Component sentence"]]
 
+    # Tạo target_text từ các cột aspect, aspect term, opinion term, sentiment
     targets = [
         "aspect: " + (aspect if aspect else "None") +
         ", aspect term: " + (aspect_term if aspect_term else "None") +
         ", opinion term: " + (opinion if opinion else "None") +
         ", sentiment: " + (sentiment if sentiment else "None")
         for aspect, aspect_term, opinion, sentiment in zip(
-            examples.get("Aspect Category", []),
-            examples.get("Aspect Terms", []),
-            examples.get("Opinion Terms", []),
-            examples.get("Polarity Sentiment", [])
+            examples["Aspect Category"],
+            examples["Aspect Terms"],
+            examples["Opinion Terms"],
+            examples["Polarity Sentiment"]
         )
     ]
     return {"input_text": inputs, "target_text": targets}

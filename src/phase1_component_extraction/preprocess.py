@@ -1,11 +1,11 @@
 from collections import defaultdict
 from transformers import T5Tokenizer, T5ForConditionalGeneration
+import torch
 
 tokenizer = T5Tokenizer.from_pretrained("t5-base")
 model = T5ForConditionalGeneration.from_pretrained("t5-base")
 
-
-def preprocess_component_batch(batch):
+def preprocess_component(batch):
     grouped = defaultdict(lambda: {"full_review": "", "component_sentences": []})
 
     for i in range(len(batch["Review ID"])):
@@ -33,6 +33,11 @@ def tokenize_component(batch, tokenizer):
         [(token if token != tokenizer.pad_token_id else -100) for token in label]
         for label in labels["input_ids"]
     ]
+
+    # Unsqueeze the labels if they are scalar (for multi-GPU)
+    if isinstance(labels["input_ids"], torch.Tensor):
+        if labels["input_ids"].dim() == 1:
+            labels["input_ids"] = labels["input_ids"].unsqueeze(0)
 
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
