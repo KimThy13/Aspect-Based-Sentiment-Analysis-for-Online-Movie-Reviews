@@ -1,10 +1,10 @@
-from utils.data_loader import load_absa_dataset
+from utils.data_loader import load_dataset_from_folder
 from absa_predictor import ABSAPredictor
 from utils.evaluator import evaluate_absa_outputs
 
 def run_absa_prediction(model_path, data_path="data/preprocessed/absa"):
     # Load the preprocessed/test ABSA dataset from disk
-    dataset = load_absa_dataset(data_path)
+    dataset = load_dataset_from_folder(data_path)
 
     # Initialize the ABSA predictor with the trained model
     predictor = ABSAPredictor(model_path)

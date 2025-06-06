@@ -1,55 +1,59 @@
+import os
 import torch
 import pandas as pd
 from tqdm import tqdm
 
-from phase1_component_extraction.component_predictor import ComponentPredictor
-from phase2_aspect_extraction.absa_predictor import ABSAPredictor
+from src.phase1_component_extraction.component_predictor import ComponentPredictor
+from src.phase2_aspect_extraction.absa_predictor import ABSAPredictor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load pretrained models for component extraction and ABSA
-component_model_path = "models/t5_component_extraction"
-absa_model_path = "models/t5_absa"
+def parse_absa_output(output_str):
+    """Convert ABSA output string to structured dict."""
+    try:
+        parts = {
+            "aspect": output_str.split("aspect:")[1].split(",")[0].strip(),
+            "aspect_term": output_str.split("aspect term:")[1].split(",")[0].strip(),
+            "opinion_term": output_str.split("opinion term:")[1].split(",")[0].strip(),
+            "sentiment": output_str.split("sentiment:")[1].strip()
+        }
+        return parts
+    except Exception:
+        return {"aspect": None, "aspect_term": None, "opinion_term": None, "sentiment": None}
 
-component_predictor = ComponentPredictor(component_model_path)
-absa_predictor = ABSAPredictor(absa_model_path)
-
-def absa_pipeline(full_review):
-    # Step 1: Extract component sentences from the full review text
-    component_sentences = component_predictor.predict([full_review])[0]  # returns list of component sentences
-
-    results = []
-    # Step 2: For each component sentence, run ABSA prediction
-    for comp in component_sentences:
-        absa_output = absa_predictor.predict([comp])[0]  # predict aspect, sentiment, opinion
-        results.append({
-            "full_review": full_review,   # original review text
-            "component": comp,            # extracted component sentence
-            "absa_output": absa_output    # ABSA model prediction on this component
-        })
-
-    # Return a DataFrame of results for this full review
-    return pd.DataFrame(results)
-
-def process_reviews(full_reviews):
-    all_results = []
-    # Iterate over all full reviews with progress bar
-    for review in tqdm(full_reviews, desc="Running End-to-End ABSA"):
-        # Run the full pipeline for each review and collect results
-        result_df = absa_pipeline(review)
-        all_results.append(result_df)
-
-    # Concatenate all results into a single DataFrame
-    return pd.concat(all_results, ignore_index=True)
-
-if __name__ == "__main__":
-    # Load raw reviews from CSV
-    df = pd.read_csv("data/raw/full_reviews.csv")
+def run_absa_pipeline(
+    input_csv: str,
+    output_csv: str,
+    component_model_path: str,
+    absa_model_path: str
+):
+    """Run end-to-end component + ABSA prediction pipeline and save to CSV."""
+    # Load reviews
+    df = pd.read_csv(input_csv)
+    if "review" not in df.columns:
+        raise ValueError("Input CSV must contain a 'review' column.")
     full_reviews = df["review"].tolist()
 
-    # Run the pipeline on all reviews
-    final_result = process_reviews(full_reviews)
+    # Load models
+    component_predictor = ComponentPredictor(component_model_path)
+    absa_predictor = ABSAPredictor(absa_model_path)
 
-    # Save the final results to CSV
-    final_result.to_csv("pipeline/output.csv", index=False)
-    print("Saved pipeline/output.csv")
+    results = []
+    for review in tqdm(full_reviews, desc="Running ABSA pipeline"):
+        comp_sentences = component_predictor.predict([review])[0]
+        for comp in comp_sentences:
+            absa_output = absa_predictor.predict([comp])[0]
+            parsed = parse_absa_output(absa_output)
+            results.append({
+                "full_review": review,
+                "component": comp,
+                "aspect": parsed["aspect"],
+                "aspect_term": parsed["aspect_term"],
+                "opinion_term": parsed["opinion_term"],
+                "sentiment": parsed["sentiment"]
+            })
+
+    # Save results
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    pd.DataFrame(results).to_csv(output_csv, index=False)
+    print(f"Saved pipeline result to {output_csv}")

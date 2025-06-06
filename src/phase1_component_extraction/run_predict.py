@@ -1,10 +1,10 @@
-from utils.data_loader import load_component_dataset
+from utils.data_loader import load_dataset_from_folder
 from component_predictor import ComponentPredictor
 from utils.evaluator import evaluate_component_outputs
 
 def run_component_prediction(model_path, data_path="data/preprocessed/component"):
     # Load the preprocessed/tokenized dataset from the given path
-    dataset = load_component_dataset(data_path)
+    dataset = load_dataset_from_folder(data_path)
 
     # Load the trained model using the ComponentPredictor class
     predictor = ComponentPredictor(model_path)
