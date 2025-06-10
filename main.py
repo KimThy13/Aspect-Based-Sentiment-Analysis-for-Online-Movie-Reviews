@@ -10,6 +10,7 @@ from src.phase2_aspect_extraction.absa_predictor import ABSAPredictor
 from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs
 from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import T5Trainer
+from pathlib import Path
 
 def main(args):
     # Step 1: Prepare dataset (split into train/val/test)
@@ -117,4 +118,11 @@ if __name__ == "__main__":
     parser.add_argument("--num_beams", type=int, default=4, help="Number of beams for beam search in ABSA prediction")
 
     args = parser.parse_args()
+
+    args.raw_data_path = Path(args.raw_data_path)
+    args.save_dir = Path(args.save_dir)
+    args.component_model_path = Path(args.component_model_path)
+    args.absa_model_path = Path(args.absa_model_path)
+    args.pipeline_input = Path(args.pipeline_input)
+    args.pipeline_output = Path(args.pipeline_output)
     main(args)
