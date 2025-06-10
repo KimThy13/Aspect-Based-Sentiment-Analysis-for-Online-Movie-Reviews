@@ -4,5 +4,4 @@ torch>=2.2.0
 scikit-learn>=1.4.0
 pandas>=2.2.0
 tqdm>=4.66.0
-evaluate
-re
+evaluate>=0.4.1

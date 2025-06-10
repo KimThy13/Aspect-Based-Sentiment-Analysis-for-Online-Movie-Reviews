@@ -22,7 +22,7 @@ def main(args):
         comp_path = "data/preprocessed/component"
         if not os.path.exists(comp_path):
             raw_comp_dataset = load_dataset_from_folder(args.save_dir)
-            processed_comp_dataset = raw_comp_dataset.map(preprocess_component, batched=True)
+            processed_comp_dataset = raw_comp_dataset.map(preprocess_component, batched=True, remove_columns=raw_comp_dataset["train"].column_names)
             tokenized_comp_dataset = processed_comp_dataset.map(tokenize_component, batched=True)
             tokenized_comp_dataset.save_to_disk(comp_path)
         else:
