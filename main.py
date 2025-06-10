@@ -88,7 +88,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ABSA Pipeline Runner")
-
+    ROOT_DIR = Path(__file__).resolve().parent
     current_file = Path(__file__).resolve()
     while current_file.name != "Aspect-Based-Sentiment-Analysis-for-Online-Movie-Reviews":
         current_file = current_file.parent
