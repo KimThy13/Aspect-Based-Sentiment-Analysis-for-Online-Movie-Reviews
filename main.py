@@ -88,6 +88,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ABSA Pipeline Runner")
+    ROOT_DIR = Path(__file__).resolve().parent
 
     # Flags to control workflow
     parser.add_argument("--prepare_data", action="store_true", help="Prepare and split dataset")
@@ -119,10 +120,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.raw_data_path = Path(args.raw_data_path)
-    args.save_dir = Path(args.save_dir)
-    args.component_model_path = Path(args.component_model_path)
-    args.absa_model_path = Path(args.absa_model_path)
-    args.pipeline_input = Path(args.pipeline_input)
-    args.pipeline_output = Path(args.pipeline_output)
+    args.raw_data_path = ROOT_DIR / args.raw_data_path
+    args.save_dir = ROOT_DIR / args.save_dir
+    args.component_model_path = ROOT_DIR / args.component_model_path
+    args.absa_model_path = ROOT_DIR / args.absa_model_path
+    args.pipeline_input = ROOT_DIR / args.pipeline_input
+    args.pipeline_output = ROOT_DIR / args.pipeline_output
     main(args)
