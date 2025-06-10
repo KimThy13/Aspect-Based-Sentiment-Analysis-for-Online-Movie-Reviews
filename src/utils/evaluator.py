@@ -1,8 +1,12 @@
 import re
 from sklearn.metrics import f1_score, accuracy_score
 import evaluate
+import json
+import logging
+logger = logging.getLogger(__name__)
 
-def evaluate_component_outputs(predictions, references):
+# Phase 1
+def evaluate_component_outputs(predictions, references, output_file=None):
     """
     Evaluate component extraction outputs (sentence generation task).
     Args:
@@ -20,14 +24,21 @@ def evaluate_component_outputs(predictions, references):
     exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
 
     # Print evaluation results
-    print("\n==== Component Sentence Extraction Evaluation ====")
+    logger.info("==== Component Sentence Extraction Evaluation ====")
     for k, v in rouge_scores.items():
-        print(f"{k}: {v:.4f}")
-    print(f"Exact Match: {exact_match_acc:.4f}")
+        logger.info(f"{k}: {v:.4f}")
+    logger.info(f"Exact Match: {exact_match_acc:.4f}")
 
-    return {**rouge_scores, "exact_match": exact_match_acc}
+    results = {**rouge_scores, "exact_match": exact_match_acc}
 
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=4)
+        logger.info(f"Saved component evaluation results to {output_file}")
 
+    return results
+
+# Phase 2
 def evaluate_absa_outputs(target_texts, predicted_texts):
     """
     Evaluate ABSA outputs by comparing generated text to target text.
@@ -53,7 +64,8 @@ def evaluate_absa_outputs(target_texts, predicted_texts):
                 'opinion_term': re.search(r'opinion term:\s*(.*?),', text).group(1).strip(),
                 'sentiment': re.search(r'sentiment:\s*(\w+)', text).group(1).strip()
             }
-        except:
+        except Exception as e:
+            logger.warning(f"Failed to parse text: {text} - {e}")
             return None
 
     # Extract parts from target and predicted texts, filter out parse errors

@@ -34,5 +34,5 @@ def prepare_and_save_datasets(input_path, output_dir):
 if __name__ == "__main__":
     prepare_and_save_datasets(
         input_path="data/raw/full_dataset.csv",
-        output_dir="data/processed"
+        output_dir="data/processed/"
     )

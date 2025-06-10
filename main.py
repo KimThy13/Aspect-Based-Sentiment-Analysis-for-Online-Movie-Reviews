@@ -1,16 +1,15 @@
 import argparse
 import os
-
+from datasets import load_from_disk
 from src.utils.prepare_data import prepare_and_save_datasets
-from src.utils.data_loader import load_dataset_from_folder, load_from_disk
+from src.utils.data_loader import load_dataset_from_folder
 from src.phase1_component_extraction.preprocess import preprocess_component, tokenize_component
 from src.phase2_aspect_extraction.preprocess import preprocess_absa, tokenize_absa
-from src.phase1_component_extraction.component_trainer import ComponentTrainer
-from src.phase2_aspect_extraction.absa_trainer import ABSATrainer
 from src.phase1_component_extraction.component_predictor import ComponentPredictor
 from src.phase2_aspect_extraction.absa_predictor import ABSAPredictor
 from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs
 from src.pipeline.run_pipeline import run_absa_pipeline
+from src.utils.trainer import T5Trainer
 
 def main(args):
     # Step 1: Prepare dataset (split into train/val/test)
@@ -30,8 +29,12 @@ def main(args):
 
     # Step 3: Train component model
     if args.train_component:
-        comp_trainer = ComponentTrainer(tokenized_comp_dataset)
-        comp_trainer.train()
+        absa_trainer = T5Trainer(
+            dataset=tokenized_comp_dataset,
+            **vars(args) 
+        )
+        absa_trainer.train()
+
 
     # Step 4: Evaluate component extraction
     if args.eval_component:
@@ -54,12 +57,20 @@ def main(args):
 
     # Step 6: Train ABSA model
     if args.train_absa:
-        absa_trainer = ABSATrainer(tokenized_absa_dataset)
+        absa_trainer = T5Trainer(
+            dataset=tokenized_absa_dataset,
+            **vars(args)
+        )
         absa_trainer.train()
 
     # Step 7: Evaluate ABSA model
     if args.eval_absa:
-        absa_predictor = ABSAPredictor(args.absa_model_path)
+        absa_predictor = ABSAPredictor(
+            args.absa_model_path,
+            max_length=args.max_length,
+            batch_size=args.batch_size,
+            num_beams=args.num_beams
+        )
         absa_test_inputs = tokenized_absa_dataset["test"]["Component sentence"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
@@ -83,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_component", action="store_true", help="Evaluate component extraction model")
     parser.add_argument("--train_absa", action="store_true", help="Train ABSA model")
     parser.add_argument("--eval_absa", action="store_true", help="Evaluate ABSA model")
-    parser.add_argument("--run_pipeline", action="store_true", help="Run full ABSA pipeline")
+    parser.add_argument("--run_pipeline", action="store_true", help="Run end-to-end pipeline")
 
     # Paths
     parser.add_argument("--raw_data_path", type=str, default="data/raw/full_dataset.csv")
@@ -92,6 +103,18 @@ if __name__ == "__main__":
     parser.add_argument("--absa_model_path", type=str, default=".models/t5_absa")
     parser.add_argument("--pipeline_input", type=str, default="data/raw/full_reviews.csv")
     parser.add_argument("--pipeline_output", type=str, default="pipeline/output.csv")
+
+    #hyperparameters
+    parser.add_argument("--epochs", type=int, default=20, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=8, help="Batch size per device")
+    parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
+    parser.add_argument("--save_total_limit", type=int, default=1, help="Max checkpoints to keep")
+    parser.add_argument("--logging_steps", type=int, default=50, help="Logging frequency in steps")
+    parser.add_argument("--warmup_steps", type=int, default=500, help="Warmup steps for learning rate scheduler")
+    parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay for optimizer")
+    parser.add_argument("--save_strategy", type=str, default="epoch", help="Checkpoint save strategy")
+    parser.add_argument("--max_length", type=int, default=64, help="Max generation length for ABSA prediction")
+    parser.add_argument("--num_beams", type=int, default=4, help="Number of beams for beam search in ABSA prediction")
 
     args = parser.parse_args()
     main(args)
