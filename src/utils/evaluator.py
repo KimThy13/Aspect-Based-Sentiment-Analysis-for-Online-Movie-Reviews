@@ -5,31 +5,86 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-# Phase 1
+# # Phase 1
+# def evaluate_component_outputs(predictions, references, output_file=None):
+#     """
+#     Evaluate component extraction outputs (sentence generation task).
+#     Args:
+#         predictions (List[str]): Generated sentences by model.
+#         references (List[str]): Ground truth sentences.
+#     Returns:
+#         dict: Dictionary of ROUGE scores and exact match accuracy.
+#     """
+#     rouge = evaluate.load("rouge")
+
+#     # Compute ROUGE scores between predictions and references
+#     rouge_scores = rouge.compute(predictions=predictions, references=references)
+
+#     # Calculate exact match accuracy (strict string equality)
+#     exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
+
+#     # Print evaluation results
+#     logger.info("==== Component Sentence Extraction Evaluation ====")
+#     for k, v in rouge_scores.items():
+#         logger.info(f"{k}: {v:.4f}")
+#     logger.info(f"Exact Match: {exact_match_acc:.4f}")
+
+#     results = {**rouge_scores, "exact_match": exact_match_acc}
+
+#     if output_file:
+#         with open(output_file, "w", encoding="utf-8") as f:
+#             json.dump(results, f, indent=4)
+#         logger.info(f"Saved component evaluation results to {output_file}")
+
+#     return results
+
 def evaluate_component_outputs(predictions, references, output_file=None):
     """
-    Evaluate component extraction outputs (sentence generation task).
+    Evaluate component extraction outputs (sentence generation task) using set matching.
     Args:
         predictions (List[str]): Generated sentences by model.
         references (List[str]): Ground truth sentences.
+        output_file (str, optional): Path to save evaluation result as JSON.
     Returns:
-        dict: Dictionary of ROUGE scores and exact match accuracy.
+        dict: Dictionary of F1, precision, recall, and optionally ROUGE and exact match.
     """
-    rouge = evaluate.load("rouge")
 
-    # Compute ROUGE scores between predictions and references
-    rouge_scores = rouge.compute(predictions=predictions, references=references)
+    # Strip and lower all sentences for consistency
+    pred_set = set([p.strip().lower() for p in predictions])
+    ref_set = set([r.strip().lower() for r in references])
 
-    # Calculate exact match accuracy (strict string equality)
-    exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
+    true_positives = len(pred_set & ref_set)
+    false_positives = len(pred_set - ref_set)
+    false_negatives = len(ref_set - pred_set)
 
-    # Print evaluation results
+    precision = true_positives / (true_positives + false_positives + 1e-8)
+    recall = true_positives / (true_positives + false_negatives + 1e-8)
+    f1 = 2 * precision * recall / (precision + recall + 1e-8)
+
     logger.info("==== Component Sentence Extraction Evaluation ====")
-    for k, v in rouge_scores.items():
-        logger.info(f"{k}: {v:.4f}")
-    logger.info(f"Exact Match: {exact_match_acc:.4f}")
+    logger.info(f"Set-based Precision: {precision:.4f}")
+    logger.info(f"Set-based Recall: {recall:.4f}")
+    logger.info(f"Set-based F1: {f1:.4f}")
 
-    results = {**rouge_scores, "exact_match": exact_match_acc}
+    results = {
+        "precision": precision,
+        "recall": recall,
+        "f1": f1
+    }
+
+    # Optional: if predictions and references have same length, also compute ROUGE and exact match
+    if len(predictions) == len(references):
+        rouge = evaluate.load("rouge")
+        rouge_scores = rouge.compute(predictions=predictions, references=references)
+        exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
+
+        logger.info("ROUGE Scores (only if lengths match):")
+        for k, v in rouge_scores.items():
+            logger.info(f"{k}: {v:.4f}")
+        logger.info(f"Exact Match: {exact_match_acc:.4f}")
+
+        results.update(rouge_scores)
+        results["exact_match"] = exact_match_acc
 
     if output_file:
         with open(output_file, "w", encoding="utf-8") as f:
@@ -37,6 +92,11 @@ def evaluate_component_outputs(predictions, references, output_file=None):
         logger.info(f"Saved component evaluation results to {output_file}")
 
     return results
+
+
+
+
+
 
 # Phase 2
 def evaluate_absa_outputs(target_texts, predicted_texts):
