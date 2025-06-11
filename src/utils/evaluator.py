@@ -5,39 +5,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-# # Phase 1
-# def evaluate_component_outputs(predictions, references, output_file=None):
-#     """
-#     Evaluate component extraction outputs (sentence generation task).
-#     Args:
-#         predictions (List[str]): Generated sentences by model.
-#         references (List[str]): Ground truth sentences.
-#     Returns:
-#         dict: Dictionary of ROUGE scores and exact match accuracy.
-#     """
-#     rouge = evaluate.load("rouge")
-
-#     # Compute ROUGE scores between predictions and references
-#     rouge_scores = rouge.compute(predictions=predictions, references=references)
-
-#     # Calculate exact match accuracy (strict string equality)
-#     exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
-
-#     # Print evaluation results
-#     logger.info("==== Component Sentence Extraction Evaluation ====")
-#     for k, v in rouge_scores.items():
-#         logger.info(f"{k}: {v:.4f}")
-#     logger.info(f"Exact Match: {exact_match_acc:.4f}")
-
-#     results = {**rouge_scores, "exact_match": exact_match_acc}
-
-#     if output_file:
-#         with open(output_file, "w", encoding="utf-8") as f:
-#             json.dump(results, f, indent=4)
-#         logger.info(f"Saved component evaluation results to {output_file}")
-
-#     return results
-
+# Phase 1
 def evaluate_component_outputs(predictions, references, output_file=None):
     """
     Evaluate component extraction outputs (sentence generation task) using set matching.
@@ -99,7 +67,7 @@ def evaluate_component_outputs(predictions, references, output_file=None):
 
 
 # Phase 2
-def evaluate_absa_outputs(target_texts, predicted_texts):
+def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
     """
     Evaluate ABSA outputs by comparing generated text to target text.
     Uses ROUGE, F1, accuracy, and exact match metrics on extracted parts.
@@ -151,8 +119,9 @@ def evaluate_absa_outputs(target_texts, predicted_texts):
     results = {**rouge_results, **f1_scores, **other_metrics}
 
     # Print all evaluation results
-    print("\n==== Evaluation Results ====")
-    for k, v in results.items():
-        print(f"{k}: {v:.4f}")
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=4)
+        print(f"\nSaved ABSA evaluation results to: {output_file}")
 
     return results

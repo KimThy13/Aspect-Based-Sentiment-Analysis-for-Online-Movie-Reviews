@@ -91,13 +91,13 @@ def main(args):
             raw_absa_dataset = load_dataset_from_folder(args.save_dir)
 
             processed_absa_dataset = raw_absa_dataset.map(
-                preprocess_component,
+                preprocess_absa,
                 batched=True,
                 remove_columns=raw_absa_dataset["train"].column_names
             )
 
             tokenized_absa_dataset = processed_absa_dataset.map(
-                partial(tokenize_component, tokenizer=tokenizer),
+                partial(tokenize_absa, tokenizer=tokenizer),
                 batched=True
             )
 
