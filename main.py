@@ -87,7 +87,7 @@ def main(args):
         else:
             tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
 
-        if not os.path.exists(comp_path):
+        if not os.path.exists(absa_path):
             raw_absa_dataset = load_dataset_from_folder(args.save_dir)
 
             processed_absa_dataset = raw_absa_dataset.map(
@@ -124,7 +124,7 @@ def main(args):
         absa_test_inputs = tokenized_absa_dataset["test"]["Component sentence"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
-        
+
         # Save predictions
         os.makedirs(args.save_dir, exist_ok=True)
         df = pd.DataFrame({

@@ -1,11 +1,5 @@
 from collections import defaultdict
-from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
-
-# Load tokenizer and model (used globally in this script)
-tokenizer = T5Tokenizer.from_pretrained("t5-base")
-model = T5ForConditionalGeneration.from_pretrained("t5-base")
-
 
 def preprocess_absa(examples):
     # Create input_text by prepending a prompt to each component sentence.
@@ -31,7 +25,7 @@ def preprocess_absa(examples):
     return {"input_text": inputs, "target_text": targets}
 
 
-def tokenize_absa(batch):
+def tokenize_absa(batch, tokenizer):
     # Tokenize the input_texts: convert to input_ids and attention masks
     model_inputs = tokenizer(
         batch["input_text"],

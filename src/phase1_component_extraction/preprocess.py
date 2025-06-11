@@ -1,5 +1,4 @@
 from collections import defaultdict
-from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
 
 def preprocess_component(batch):
