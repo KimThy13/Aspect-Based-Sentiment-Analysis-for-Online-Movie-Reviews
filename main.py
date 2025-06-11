@@ -1,6 +1,7 @@
 import argparse
 from functools import partial
 import os
+import pandas as pd
 from transformers import T5Tokenizer
 from datasets import load_from_disk
 from src.utils.prepare_data import prepare_and_save_datasets
@@ -56,21 +57,50 @@ def main(args):
         absa_trainer.train()
 
 
-    # Step 4: Evaluate component extraction
+     # Step 4: Evaluate component extraction
     if args.eval_component:
         component_predictor = ComponentPredictor(args.component_model_path)
         comp_test_inputs = tokenized_comp_dataset["test"]["input_text"]
         comp_test_refs = tokenized_comp_dataset["test"]["target_text"]
         comp_preds = component_predictor.predict(comp_test_inputs)
-        evaluate_component_outputs(comp_preds, comp_test_refs)
+        
+        # Save predictions
+        os.makedirs(args.save_dir, exist_ok=True)
+        df = pd.DataFrame({
+            "input": comp_test_inputs,
+            "reference": comp_test_refs,
+            "prediction": comp_preds
+        })
+        df.to_csv(os.path.join(args.save_dir, "component_extraction_predictions.csv"), index=False)
 
-    # Step 5: Preprocess ABSA dataset if needed
+        #Evaluation
+        component_eval_path = os.path.join(args.save_dir, "component_eval_results.json")
+        evaluate_component_outputs(comp_preds, comp_test_refs, output_file=component_eval_path)
+
+    # Step 5: Preprocess ABSA dataset if needed    
     if args.train_absa or args.eval_absa:
         absa_path = "data/preprocessed/absa"
-        if not os.path.exists(absa_path):
+
+        # Load tokenizer
+        if os.path.exists(args.absa_model_path):
+            tokenizer = T5Tokenizer.from_pretrained(args.absa_model_path, legacy=True)
+        else:
+            tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
+
+        if not os.path.exists(comp_path):
             raw_absa_dataset = load_dataset_from_folder(args.save_dir)
-            processed_absa_dataset = raw_absa_dataset.map(preprocess_absa, batched=True)
-            tokenized_absa_dataset = processed_absa_dataset.map(tokenize_absa, batched=True)
+
+            processed_absa_dataset = raw_absa_dataset.map(
+                preprocess_component,
+                batched=True,
+                remove_columns=raw_absa_dataset["train"].column_names
+            )
+
+            tokenized_absa_dataset = processed_absa_dataset.map(
+                partial(tokenize_component, tokenizer=tokenizer),
+                batched=True
+            )
+
             tokenized_absa_dataset.save_to_disk(absa_path)
         else:
             tokenized_absa_dataset = load_from_disk(absa_path)
@@ -94,7 +124,19 @@ def main(args):
         absa_test_inputs = tokenized_absa_dataset["test"]["Component sentence"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
-        evaluate_absa_outputs(absa_test_refs, absa_preds)
+        
+        # Save predictions
+        os.makedirs(args.save_dir, exist_ok=True)
+        df = pd.DataFrame({
+            "input": absa_test_inputs,
+            "reference": absa_test_refs,
+            "prediction": absa_preds
+        })
+        df.to_csv(os.path.join(args.save_dir, "absa_extraction_predictions.csv"), index=False)
+
+        #Evaluation
+        absa_eval_path = os.path.join(args.save_dir, "absa_eval_results.json")
+        evaluate_absa_outputs(absa_test_refs, absa_preds, output_file=absa_eval_path)
 
     # Step 8: Run full ABSA pipeline on real reviews and export results
     if args.run_pipeline:
