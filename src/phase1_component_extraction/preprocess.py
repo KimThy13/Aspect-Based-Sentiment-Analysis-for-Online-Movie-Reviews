@@ -2,10 +2,6 @@ from collections import defaultdict
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
 
-# Load the tokenizer and model from the pretrained "t5-base"
-tokenizer = T5Tokenizer.from_pretrained("t5-base")
-model = T5ForConditionalGeneration.from_pretrained("t5-base")
-
 def preprocess_component(batch):
     """
     Groups component sentences by review ID and prepares input-target pairs

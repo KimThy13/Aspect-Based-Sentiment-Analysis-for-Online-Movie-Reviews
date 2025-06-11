@@ -1,5 +1,7 @@
 import argparse
+from functools import partial
 import os
+from transformers import T5Tokenizer
 from datasets import load_from_disk
 from src.utils.prepare_data import prepare_and_save_datasets
 from src.utils.data_loader import load_dataset_from_folder
@@ -20,10 +22,27 @@ def main(args):
     # Step 2: Preprocess component extraction dataset if needed
     if args.train_component or args.eval_component:
         comp_path = "data/preprocessed/component"
+
+        # Load tokenizer
+        if os.path.exists(args.component_model_path):
+            tokenizer = T5Tokenizer.from_pretrained(args.component_model_path, legacy=True)
+        else:
+            tokenizer = T5Tokenizer.from_pretrained("t5-base", legacy=True)
+
         if not os.path.exists(comp_path):
             raw_comp_dataset = load_dataset_from_folder(args.save_dir)
-            processed_comp_dataset = raw_comp_dataset.map(preprocess_component, batched=True, remove_columns=raw_comp_dataset["train"].column_names)
-            tokenized_comp_dataset = processed_comp_dataset.map(tokenize_component, batched=True)
+
+            processed_comp_dataset = raw_comp_dataset.map(
+                preprocess_component,
+                batched=True,
+                remove_columns=raw_comp_dataset["train"].column_names
+            )
+
+            tokenized_comp_dataset = processed_comp_dataset.map(
+                partial(tokenize_component, tokenizer=tokenizer),
+                batched=True
+            )
+
             tokenized_comp_dataset.save_to_disk(comp_path)
         else:
             tokenized_comp_dataset = load_from_disk(comp_path)
@@ -105,8 +124,8 @@ if __name__ == "__main__":
     # Paths
     parser.add_argument("--raw_data_path", type=str, default="data/raw/full_dataset.csv")
     parser.add_argument("--save_dir", type=str, default="data/processed")
-    parser.add_argument("--component_model_path", type=str, default=".models/t5_component_extraction")
-    parser.add_argument("--absa_model_path", type=str, default=".models/t5_absa")
+    parser.add_argument("--component_model_path", type=str, default="models/t5_component_extraction")
+    parser.add_argument("--absa_model_path", type=str, default="models/t5_absa")
     parser.add_argument("--pipeline_input", type=str, default="data/raw/full_reviews.csv")
     parser.add_argument("--pipeline_output", type=str, default="pipeline/output.csv")
 
