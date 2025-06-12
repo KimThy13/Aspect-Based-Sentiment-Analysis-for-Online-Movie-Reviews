@@ -126,9 +126,9 @@ def main(args):
             batch_size=args.batch_size,
             num_beams=args.num_beams
         )
-        absa_test_inputs = tokenized_absa_dataset["test"]
+        # absa_test_inputs = tokenized_absa_dataset["test"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
-        absa_preds = absa_predictor.predict(absa_test_inputs)
+        absa_preds = absa_predictor.predict(tokenized_absa_dataset["test"])
 
         # Save predictions
         os.makedirs(args.save_dir, exist_ok=True)
