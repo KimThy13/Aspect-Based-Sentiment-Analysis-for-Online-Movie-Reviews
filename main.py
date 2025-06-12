@@ -121,7 +121,7 @@ def main(args):
             batch_size=args.batch_size,
             num_beams=args.num_beams
         )
-        absa_test_inputs = tokenized_absa_dataset["test"]["Component sentence"]
+        absa_test_inputs = tokenized_absa_dataset["test"]["input_text"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
 
