@@ -59,7 +59,12 @@ def main(args):
 
      # Step 4: Evaluate component extraction
     if args.eval_component:
-        component_predictor = ComponentPredictor(args.component_model_path)
+        component_predictor = ComponentPredictor(
+            args.component_model_path,
+            max_length=args.max_length,
+            batch_size=args.batch_size,
+            num_beams=args.num_beams
+        )
         comp_test_inputs = tokenized_comp_dataset["test"]["input_text"]
         comp_test_refs = tokenized_comp_dataset["test"]["target_text"]
         comp_preds = component_predictor.predict(comp_test_inputs)
@@ -121,14 +126,14 @@ def main(args):
             batch_size=args.batch_size,
             num_beams=args.num_beams
         )
-        absa_test_inputs = tokenized_absa_dataset["test"]["input_text"]
+        absa_test_inputs = tokenized_absa_dataset["test"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
 
         # Save predictions
         os.makedirs(args.save_dir, exist_ok=True)
         df = pd.DataFrame({
-            "input": absa_test_inputs,
+            "input": tokenized_absa_dataset["test"]['input_text'],
             "reference": absa_test_refs,
             "prediction": absa_preds
         })
