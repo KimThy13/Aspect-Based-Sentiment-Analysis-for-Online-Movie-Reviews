@@ -1,6 +1,7 @@
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 class ABSAPredictor:
     def __init__(self, model_path, max_length=64, num_beams=4, batch_size=8):
@@ -23,22 +24,19 @@ class ABSAPredictor:
     def predict(self, tokenized_dataset):
         predictions = []
 
-        # Duyệt theo từng batch
-        for i in tqdm(range(0, len(tokenized_dataset), self.batch_size)):
-            batch = tokenized_dataset[i:i+self.batch_size]
+        # Sử dụng DataLoader để chia batch và tự xử lý padding
+        dataloader = DataLoader(
+            tokenized_dataset, 
+            batch_size=self.batch_size, 
+            collate_fn=lambda batch: self.tokenizer.pad(batch, return_tensors="pt")
+        )
 
-            # Tạo tensor input_ids và attention_mask từ batch
-            input_ids = [torch.tensor(example["input_ids"]) for example in batch]
-            attention_mask = [torch.tensor(example["attention_mask"]) for example in batch]
+        self.model.eval()
 
-            # Padding cho các sequence trong batch để bằng chiều nhau
-            input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id)
-            attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
+        for batch in tqdm(dataloader, desc="Predicting"):
+            input_ids = batch["input_ids"].to(self.device)
+            attention_mask = batch["attention_mask"].to(self.device)
 
-            input_ids = input_ids.to(self.model.device)
-            attention_mask = attention_mask.to(self.model.device)
-
-            # Disable gradient calculation for inference
             with torch.no_grad():
                 output_ids = self.model.generate(
                     input_ids=input_ids,
@@ -48,41 +46,9 @@ class ABSAPredictor:
                     early_stopping=True
                 )
 
-            # Decode the generated token IDs into text and add to predictions
-            for output in output_ids:
-                decoded = self.tokenizer.decode(output, skip_special_tokens=True)
-                predictions.append(decoded)
+            # Decode predictions
+            decoded_preds = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+            predictions.extend(decoded_preds)
 
         return predictions
-    # def predict(self, sentences):
-    #     # Set the model to evaluation mode (no training)
-    #     self.model.eval()
-
-    #     # Prepare inputs by adding a task prompt to each sentence
-    #     inputs = ["Extract aspect, sentiment, aspect term and opinion term: " + s for s in sentences]
-
-    #     # Tokenize the inputs and move them to the correct device
-    #     encoded = self.tokenizer(inputs, padding=True, truncation=True, return_tensors="pt").to(self.device)
         
-    #     predictions = []
-
-    #     # Process inputs in batches
-    #     for i in tqdm(range(0, len(inputs), self.batch_size)):
-    #         input_ids = encoded["input_ids"][i:i+self.batch_size]
-    #         attention_mask = encoded["attention_mask"][i:i+self.batch_size]
-
-    #         # Inference without computing gradients
-    #         with torch.no_grad():
-    #             output = self.model.generate(
-    #                 input_ids=input_ids,
-    #                 attention_mask=attention_mask,
-    #                 max_length=self.max_length,
-    #                 num_beams=self.num_beams,
-    #                 early_stopping=True
-    #             )
-
-    #         # Decode generated token IDs into strings and collect predictions
-    #         decoded = self.tokenizer.batch_decode(output, skip_special_tokens=True)
-    #         predictions.extend(decoded)
-
-    #     return predictions
