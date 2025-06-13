@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from torch.utils.data import DataLoader
-
+from transformers import default_data_collator
 
 class ComponentPredictor:
     def __init__(self, model_path, max_length=512, num_beams=4, batch_size=8):
@@ -64,7 +64,7 @@ class ComponentPredictor:
         dataloader = DataLoader(
             tokenized_dataset, 
             batch_size=self.batch_size, 
-            collate_fn=lambda batch: self.tokenizer.pad(batch, return_tensors="pt")
+            collate_fn=default_data_collator
         )
 
         self.model.eval()

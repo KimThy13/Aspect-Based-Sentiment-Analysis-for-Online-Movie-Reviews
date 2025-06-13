@@ -2,6 +2,7 @@ import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+from transformers import default_data_collator
 
 class ABSAPredictor:
     def __init__(self, model_path, max_length=64, num_beams=4, batch_size=8):
@@ -24,7 +25,7 @@ class ABSAPredictor:
         dataloader = DataLoader(
             tokenized_dataset, 
             batch_size=self.batch_size, 
-            collate_fn=lambda batch: self.tokenizer.pad(batch, return_tensors="pt")
+            collate_fn=default_data_collator
         )
 
         self.model.eval()
