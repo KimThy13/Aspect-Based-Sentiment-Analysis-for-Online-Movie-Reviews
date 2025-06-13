@@ -5,10 +5,6 @@ from torch.utils.data import DataLoader
 
 class ABSAPredictor:
     def __init__(self, model_path, max_length=64, num_beams=4, batch_size=8):
-        # Load the tokenizer and model from the given path
-        self.tokenizer = T5Tokenizer.from_pretrained(model_path, use_safetensors=True)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_path, use_safetensors=True)
-
         # Set device to GPU if available, otherwise use CPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
