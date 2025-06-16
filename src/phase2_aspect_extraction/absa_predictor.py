@@ -40,7 +40,9 @@ class ABSAPredictor:
                     attention_mask=attention_mask,
                     max_length=self.max_length,
                     num_beams=self.num_beams,
-                    early_stopping=True
+                    early_stopping=True,
+                    num_return_sequences=1,
+                    do_sample=False
                 )
 
             # Decode predictions
@@ -48,4 +50,27 @@ class ABSAPredictor:
             predictions.extend(decoded_preds)
 
         return predictions
+    
+    def predict_single(self, input_text):
+        # Tokenize input
+        inputs = self.tokenizer(
+            input_text,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=self.max_length
+        ).to(self.device)
+
+        self.model.eval()
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
+                max_length=self.max_length,
+                num_beams=self.num_beams,
+                early_stopping=True
+            )
+        
+        decoded = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        return decoded
         

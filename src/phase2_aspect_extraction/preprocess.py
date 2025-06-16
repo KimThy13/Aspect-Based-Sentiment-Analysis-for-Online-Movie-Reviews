@@ -4,7 +4,8 @@ import torch
 def preprocess_absa(examples):
     # Create input_text by prepending a prompt to each component sentence.
     # This tells the model what task to perform.
-    inputs = ["Extract aspect, sentiment, and opinion term: " + str(sentence)
+    # inputs = ["Extract aspect, sentiment, and opinion term: " + str(sentence)
+    inputs = ["Extract aspect, aspect term, sentiment, and opinion term from: " + str(sentence)
               for sentence in examples["Component sentence"]]
 
     # Create target_text by formatting the output structure using all relevant fields.
