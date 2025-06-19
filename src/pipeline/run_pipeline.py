@@ -40,9 +40,10 @@ def run_absa_pipeline(
 
     results = []
     for review in tqdm(full_reviews, desc="Running ABSA pipeline"):
-        comp_sentences = component_predictor.predict([review])[0]
+        comp_sentences = component_predictor.predict_single([review])[0]
+        
         for comp in comp_sentences:
-            absa_output = absa_predictor.predict([comp])[0]
+            absa_output = absa_predictor.predict_single([comp])[0]
             parsed = parse_absa_output(absa_output)
             results.append({
                 "full_review": review,
