@@ -29,7 +29,7 @@ def run_absa_pipeline(
 ):
     """Run end-to-end component + ABSA prediction pipeline and save to CSV."""
     # Load reviews
-    df = pd.read_csv(input_csv)
+    df = pd.read_csv(input_csv, encoding='utf-8-sig')
     if "review" not in df.columns:
         raise ValueError("Input CSV must contain a 'review' column.")
     full_reviews = df["review"].tolist()
