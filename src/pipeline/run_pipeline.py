@@ -4,8 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import chardet
 
-from src.phase1_component_extraction.component_predictor import ComponentPredictor
-from src.phase2_aspect_extraction.absa_predictor import ABSAPredictor
+from src.utils.predictor import Predictor
 from transformers import default_data_collator
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -73,8 +72,8 @@ def run_absa_pipeline(
     reviews = df["review"].fillna("").tolist()
 
     # Load model (read from model path)
-    component_predictor = ComponentPredictor(component_model_path)
-    absa_predictor = ABSAPredictor(absa_model_path)
+    component_predictor = Predictor(component_model_path)
+    absa_predictor = Predictor(absa_model_path)
 
     # Prepare dataset for component model
     tokenized_dataset = prepare_component_inputs(
@@ -94,13 +93,6 @@ def run_absa_pipeline(
             absa_prompt = build_absa_prompt(comp)
             absa_pred = absa_predictor.predict_single(absa_prompt)
             parsed = parse_absa_output(absa_pred)
-            # results.append(
-            #     {
-            #         "full_review": full_review,
-            #         "component": comp,
-            #         "absa_raw": absa_pred,
-            #     }
-            # )
             results.append({
                 "full_review": full_review,
                 "component": comp,

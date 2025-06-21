@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from transformers import default_data_collator
 import re
 
-class ABSAPredictor:
+class Predictor:
     def __init__(self, model_path, max_length=64, num_beams=4, batch_size=8):
         # Set device to GPU if available, otherwise use CPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,23 +18,6 @@ class ABSAPredictor:
         self.max_length = max_length
         self.num_beams = num_beams
         self.batch_size = batch_size
-
-    def _filter_components(self, pred_text: str, original_text: str) -> str:
-        """
-        Giữ lại những component có `aspect term` xuất hiện trong câu gốc.
-        """
-        components = [c.strip() for c in pred_text.split(";") if c.strip()]
-        original_lower = original_text.lower()
-        valid = []
-
-        for comp in components:
-            m = re.search(r"aspect term:\s*(.*?),", comp, re.IGNORECASE)
-            if m:
-                term = m.group(1).strip().lower()
-                if term and term in original_lower:
-                    valid.append(comp)
-
-        return "; ".join(valid) if valid else ""
 
     def predict(self, tokenized_dataset):
         predictions = []
@@ -69,9 +52,8 @@ class ABSAPredictor:
             decoded_batch = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
 
             for pred in decoded_batch:
-                original_sentence = next(input_text_iter)
-                filtered_pred = self._filter_components(pred, original_sentence)
-                predictions.append(filtered_pred)
+                comps = [x.strip() for x in pred.split(";") if x.strip()]
+                predictions.append(comps)
 
         return predictions
     

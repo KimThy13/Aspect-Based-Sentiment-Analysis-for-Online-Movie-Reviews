@@ -8,8 +8,7 @@ from src.utils.prepare_data import prepare_and_save_datasets
 from src.utils.data_loader import load_dataset_from_folder
 from src.phase1_component_extraction.preprocess import preprocess_component, tokenize_component
 from src.phase2_aspect_extraction.preprocess import preprocess_absa, tokenize_absa
-from src.phase1_component_extraction.component_predictor import ComponentPredictor
-from src.phase2_aspect_extraction.absa_predictor import ABSAPredictor
+from src.utils.predictor import Predictor
 from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs
 from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import T5Trainer
@@ -59,7 +58,7 @@ def main(args):
 
      # Step 4: Evaluate component extraction
     if args.eval_component:
-        component_predictor = ComponentPredictor(
+        component_predictor = Predictor(
             args.component_model_path,
             max_length=args.max_length,
             batch_size=args.batch_size,
@@ -120,7 +119,7 @@ def main(args):
 
     # Step 7: Evaluate ABSA model
     if args.eval_absa:
-        absa_predictor = ABSAPredictor(
+        absa_predictor = Predictor(
             args.absa_model_path,
             max_length=args.max_length,
             batch_size=args.batch_size,
