@@ -3,6 +3,7 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformers import default_data_collator
+import re
 
 class ABSAPredictor:
     def __init__(self, model_path, max_length=64, num_beams=4, batch_size=8):
@@ -18,15 +19,36 @@ class ABSAPredictor:
         self.num_beams = num_beams
         self.batch_size = batch_size
 
+    def _filter_components(self, pred_text: str, original_text: str) -> str:
+        """
+        Giữ lại những component có `aspect term` xuất hiện trong câu gốc.
+        """
+        components = [c.strip() for c in pred_text.split(";") if c.strip()]
+        original_lower = original_text.lower()
+        valid = []
+
+        for comp in components:
+            m = re.search(r"aspect term:\s*(.*?),", comp, re.IGNORECASE)
+            if m:
+                term = m.group(1).strip().lower()
+                if term and term in original_lower:
+                    valid.append(comp)
+
+        return "; ".join(valid) if valid else ""
+
     def predict(self, tokenized_dataset):
         predictions = []
 
-        # Sử dụng DataLoader để chia batch và tự xử lý padding
+        if "input_text" not in tokenized_dataset.column_names:
+            raise ValueError("`input_text` must be present in the dataset for filtering.")
+
         dataloader = DataLoader(
-            tokenized_dataset, 
-            batch_size=self.batch_size, 
+            tokenized_dataset,
+            batch_size=self.batch_size,
             collate_fn=default_data_collator
         )
+
+        input_text_iter = iter(tokenized_dataset["input_text"])
 
         self.model.eval()
 
@@ -41,13 +63,15 @@ class ABSAPredictor:
                     max_length=self.max_length,
                     num_beams=self.num_beams,
                     early_stopping=True,
-                    num_return_sequences=1,
-                    do_sample=False
+                    num_return_sequences=1
                 )
 
-            # Decode predictions
-            decoded_preds = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-            predictions.extend(decoded_preds)
+            decoded_batch = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+
+            for pred in decoded_batch:
+                original_sentence = next(input_text_iter)
+                filtered_pred = self._filter_components(pred, original_sentence)
+                predictions.append(filtered_pred)
 
         return predictions
     

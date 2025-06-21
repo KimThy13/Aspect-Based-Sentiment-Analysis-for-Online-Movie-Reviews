@@ -26,10 +26,12 @@ class ComponentPredictor:
     def predict(self, tokenized_dataset):
         predictions = []
 
-        # Sử dụng DataLoader để chia batch và tự xử lý padding
+        if "input_text" not in tokenized_dataset.column_names:
+            raise ValueError("`input_text` must be present in the dataset for filtering.")
+
         dataloader = DataLoader(
-            tokenized_dataset, 
-            batch_size=self.batch_size, 
+            tokenized_dataset,
+            batch_size=self.batch_size,
             collate_fn=default_data_collator
         )
 
@@ -45,14 +47,17 @@ class ComponentPredictor:
                     attention_mask=attention_mask,
                     max_length=self.max_length,
                     num_beams=self.num_beams,
-                    early_stopping=True
+                    early_stopping=True,
+                    num_return_sequences=1
                 )
 
-            # Decode predictions
-            decoded_preds = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-            predictions.extend(decoded_preds)
+            decoded_batch = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
 
-        return predictions    
+            for pred in decoded_batch:
+                comps = [x.strip() for x in pred.split(";") if x.strip()]
+                predictions.append(comps)
+
+        return predictions  
     
     def predict_single(self, input_text):
         # Tokenize input

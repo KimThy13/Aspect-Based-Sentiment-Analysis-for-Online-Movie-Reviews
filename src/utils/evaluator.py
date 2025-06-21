@@ -61,11 +61,6 @@ def evaluate_component_outputs(predictions, references, output_file=None):
 
     return results
 
-
-
-
-
-
 # Phase 2
 def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
     """
