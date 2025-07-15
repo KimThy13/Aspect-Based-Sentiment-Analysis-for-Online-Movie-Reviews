@@ -9,7 +9,7 @@ from src.utils.data_loader import load_dataset_from_folder
 from src.phase1_component_extraction.preprocess import preprocess_component, tokenize_component
 from src.phase2_aspect_extraction.preprocess import preprocess_absa, tokenize_absa
 from src.utils.predictor import Predictor
-from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs
+from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs, evaluate_component_outputs_by_sentence
 from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import T5Trainer
 from pathlib import Path
@@ -56,7 +56,7 @@ def main(args):
         absa_trainer.train()
 
 
-     # Step 4: Evaluate component extraction
+    # Step 4: Evaluate component extraction
     if args.eval_component:
         component_predictor = Predictor(
             args.component_model_path,
@@ -67,7 +67,11 @@ def main(args):
         comp_test_inputs = tokenized_comp_dataset["test"]
         comp_test_refs = tokenized_comp_dataset["test"]["target_text"]
         comp_preds = component_predictor.predict(comp_test_inputs)
-        
+    
+        # 🔧 Convert list of component sentences → joined string with `;`
+        comp_preds = [" ; ".join(p) if isinstance(p, list) else p for p in comp_preds]
+        comp_test_refs = [" ; ".join(r) if isinstance(r, list) else r for r in comp_test_refs]
+    
         # Save predictions
         os.makedirs(args.save_dir, exist_ok=True)
         df = pd.DataFrame({
@@ -77,9 +81,13 @@ def main(args):
         })
         df.to_csv(os.path.join(args.save_dir, "component_extraction_predictions.csv"), index=False)
 
-        #Evaluation
+        # Evaluation
         component_eval_path = os.path.join(args.save_dir, "component_eval_results.json")
         evaluate_component_outputs(comp_preds, comp_test_refs, output_file=component_eval_path)
+        # Evaluation 2: By sentence (new)
+        component_eval_path_sentence = os.path.join(args.save_dir, "component_eval_sentence_level.json")
+        evaluate_component_outputs_by_sentence(comp_preds, comp_test_refs, output_file=component_eval_path_sentence)
+
 
     # Step 5: Preprocess ABSA dataset if needed    
     if args.train_absa or args.eval_absa:
@@ -128,6 +136,7 @@ def main(args):
         absa_test_inputs = tokenized_absa_dataset["test"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
+        absa_preds = [p[0].strip("[]").strip("'\"") if isinstance(p, list) else p.strip("[]").strip("'\"") for p in absa_preds]
 
         # Save predictions
         os.makedirs(args.save_dir, exist_ok=True)

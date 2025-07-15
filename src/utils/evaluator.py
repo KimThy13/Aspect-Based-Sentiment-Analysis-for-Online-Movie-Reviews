@@ -1,25 +1,22 @@
 import re
-from sklearn.metrics import f1_score, accuracy_score
-import evaluate
 import json
+import nltk
 import logging
+from sklearn.metrics import f1_score, accuracy_score
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+
+nltk.download('punkt')
 logger = logging.getLogger(__name__)
 
-# Phase 1
+# ===== Phase 1: Component Extraction =====
 def evaluate_component_outputs(predictions, references, output_file=None):
-    """
-    Evaluate component extraction outputs (sentence generation task) using set matching.
-    Args:
-        predictions (List[str]): Generated sentences by model.
-        references (List[str]): Ground truth sentences.
-        output_file (str, optional): Path to save evaluation result as JSON.
-    Returns:
-        dict: Dictionary of F1, precision, recall, and optionally ROUGE and exact match.
-    """
+    pred_set = set()
+    ref_set = set()
 
-    # Strip and lower all sentences for consistency
-    pred_set = set([p.strip().lower() for p in predictions])
-    ref_set = set([r.strip().lower() for r in references])
+    for p in predictions:
+        pred_set.update([s.strip().lower() for s in p.split(";") if s.strip()])
+    for r in references:
+        ref_set.update([s.strip().lower() for s in r.split(";") if s.strip()])
 
     true_positives = len(pred_set & ref_set)
     false_positives = len(pred_set - ref_set)
@@ -29,29 +26,14 @@ def evaluate_component_outputs(predictions, references, output_file=None):
     recall = true_positives / (true_positives + false_negatives + 1e-8)
     f1 = 2 * precision * recall / (precision + recall + 1e-8)
 
-    logger.info("==== Component Sentence Extraction Evaluation ====")
-    logger.info(f"Set-based Precision: {precision:.4f}")
-    logger.info(f"Set-based Recall: {recall:.4f}")
-    logger.info(f"Set-based F1: {f1:.4f}")
-
     results = {
         "precision": precision,
         "recall": recall,
         "f1": f1
     }
 
-    # Optional: if predictions and references have same length, also compute ROUGE and exact match
     if len(predictions) == len(references):
-        rouge = evaluate.load("rouge")
-        rouge_scores = rouge.compute(predictions=predictions, references=references)
-        exact_match_acc = sum([p.strip() == r.strip() for p, r in zip(predictions, references)]) / len(predictions)
-
-        logger.info("ROUGE Scores (only if lengths match):")
-        for k, v in rouge_scores.items():
-            logger.info(f"{k}: {v:.4f}")
-        logger.info(f"Exact Match: {exact_match_acc:.4f}")
-
-        results.update(rouge_scores)
+        exact_match_acc = sum(p.strip() == r.strip() for p, r in zip(predictions, references)) / len(predictions)
         results["exact_match"] = exact_match_acc
 
     if output_file:
@@ -61,25 +43,56 @@ def evaluate_component_outputs(predictions, references, output_file=None):
 
     return results
 
-# Phase 2
-def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
-    """
-    Evaluate ABSA outputs by comparing generated text to target text.
-    Uses ROUGE, F1, accuracy, and exact match metrics on extracted parts.
-    Args:
-        target_texts (List[str]): Ground truth formatted strings.
-        predicted_texts (List[str]): Model-generated formatted strings.
-    Returns:
-        dict: Dictionary of evaluation metrics.
-    """
-    rouge = evaluate.load("rouge")
-    rouge_results = rouge.compute(predictions=predicted_texts, references=target_texts)
+def evaluate_component_outputs_by_sentence(predictions, references, output_file=None):
+    assert len(predictions) == len(references), "Predictions and references must be same length"
 
+    total_prec, total_rec, total_f1 = 0, 0, 0
+    total_bleu = 0
+    smooth_fn = SmoothingFunction().method1
+
+    for pred, ref in zip(predictions, references):
+        pred_sents = [s.strip() for s in pred.split(";") if s.strip()]
+        ref_sents = [s.strip() for s in ref.split(";") if s.strip()]
+
+        tp = sum([p in ref_sents for p in pred_sents])
+        precision = tp / len(pred_sents) if pred_sents else 0
+        recall = tp / len(ref_sents) if ref_sents else 0
+        f1 = 2 * precision * recall / (precision + recall + 1e-8) if precision + recall > 0 else 0
+
+        total_prec += precision
+        total_rec += recall
+        total_f1 += f1
+
+        # BLEU per sentence (soft similarity)
+        sample_bleu = 0
+        for p in pred_sents:
+            bleu = max(
+                [sentence_bleu([nltk.word_tokenize(r)], nltk.word_tokenize(p), smoothing_function=smooth_fn) for r in ref_sents],
+                default=0
+            )
+            sample_bleu += bleu
+        if pred_sents:
+            total_bleu += sample_bleu / len(pred_sents)
+
+    n = len(predictions)
+    results = {
+        "mean_precision": total_prec / n,
+        "mean_recall": total_rec / n,
+        "mean_f1": total_f1 / n,
+        "mean_bleu": total_bleu / n
+    }
+
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=4)
+        logger.info(f"Saved sentence-level evaluation results to {output_file}")
+
+    return results
+
+
+# ===== Phase 2: ABSA Evaluation =====
+def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
     def extract_parts(text):
-        """
-        Parse text into dictionary of aspect, aspect_term, opinion_term, sentiment.
-        Return None if parsing fails.
-        """
         try:
             return {
                 'aspect': re.search(r'aspect:\s*(.*?),', text).group(1).strip(),
@@ -91,29 +104,30 @@ def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
             logger.warning(f"Failed to parse text: {text} - {e}")
             return None
 
-    # Extract parts from target and predicted texts, filter out parse errors
     true_parts = [extract_parts(t) for t in target_texts]
     pred_parts = [extract_parts(p) for p in predicted_texts]
-    true_parts, pred_parts = zip(*[(t, p) for t, p in zip(true_parts, pred_parts) if t and p])
+    filtered = [(t, p) for t, p in zip(true_parts, pred_parts) if t and p]
 
-    # Calculate F1 score for each field
+    if not filtered:
+        logger.warning("No valid ABSA predictions to evaluate.")
+        return {}
+
+    true_parts, pred_parts = zip(*filtered)
+
     fields = ['aspect', 'aspect_term', 'opinion_term', 'sentiment']
     f1_scores = {
         f"{f}_f1": f1_score([t[f] for t in true_parts], [p[f] for p in pred_parts], average='micro')
         for f in fields
     }
 
-    # Calculate accuracy for aspect and sentiment fields and overall exact match accuracy
     other_metrics = {
         "aspect_acc": accuracy_score([t['aspect'] for t in true_parts], [p['aspect'] for p in pred_parts]),
         "sentiment_acc": accuracy_score([t['sentiment'] for t in true_parts], [p['sentiment'] for p in pred_parts]),
         "exact_match_acc": sum(t == p for t, p in zip(true_parts, pred_parts)) / len(true_parts)
     }
 
-    # Combine all metrics into one dictionary
-    results = {**rouge_results, **f1_scores, **other_metrics}
+    results = {**f1_scores, **other_metrics}
 
-    # Print all evaluation results
     if output_file:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=4)
