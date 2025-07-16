@@ -9,7 +9,7 @@ from src.utils.data_loader import load_dataset_from_folder
 from src.phase1_component_extraction.preprocess import preprocess_component, tokenize_component
 from src.phase2_aspect_extraction.preprocess import preprocess_absa, tokenize_absa
 from src.utils.predictor import Predictor
-from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs, evaluate_component_outputs_by_sentence
+from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs, evaluate_component_outputs_by_sentence, evaluate_absa_detailed
 from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import T5Trainer
 from pathlib import Path
@@ -150,6 +150,7 @@ def main(args):
         #Evaluation
         absa_eval_path = os.path.join(args.save_dir, "absa_eval_results.json")
         evaluate_absa_outputs(absa_test_refs, absa_preds, output_file=absa_eval_path)
+        evaluate_absa_detailed(absa_test_refs, absa_preds, output_file="absa_detailed_metrics.json")
 
     # Step 8: Run full ABSA pipeline on real reviews and export results
     if args.run_pipeline:

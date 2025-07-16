@@ -134,3 +134,50 @@ def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
         print(f"\nSaved ABSA evaluation results to: {output_file}")
 
     return results
+    
+# ===== Phase 2 (Bổ sung): ABSA Evaluation Per-class =====
+def evaluate_absa_detailed(target_texts, predicted_texts, output_file=None):
+    def extract_parts(text):
+        try:
+            return {
+                'aspect': re.search(r'aspect:\s*(.*?),', text).group(1).strip(),
+                'aspect_term': re.search(r'aspect term:\s*(.*?),', text).group(1).strip(),
+                'opinion_term': re.search(r'opinion term:\s*(.*?),', text).group(1).strip(),
+                'sentiment': re.search(r'sentiment:\s*(\w+)', text).group(1).strip()
+            }
+        except Exception as e:
+            logger.warning(f"Failed to parse text: {text} - {e}")
+            return None
+
+    true_parts = [extract_parts(t) for t in target_texts]
+    pred_parts = [extract_parts(p) for p in predicted_texts]
+
+    filtered = [(t, p) for t, p in zip(true_parts, pred_parts) if t and p]
+    if not filtered:
+        logger.warning("No valid ABSA predictions to evaluate.")
+        return {}
+
+    true_parts, pred_parts = zip(*filtered)
+
+    from sklearn.metrics import classification_report
+
+    y_true_aspect = [t["aspect"] for t in true_parts]
+    y_pred_aspect = [p["aspect"] for p in pred_parts]
+    aspect_report = classification_report(y_true_aspect, y_pred_aspect, output_dict=True, zero_division=0)
+
+    y_true_sentiment = [t["sentiment"] for t in true_parts]
+    y_pred_sentiment = [p["sentiment"] for p in pred_parts]
+    sentiment_report = classification_report(y_true_sentiment, y_pred_sentiment, output_dict=True, zero_division=0)
+
+    results = {
+        "aspect_report": aspect_report,
+        "sentiment_report": sentiment_report
+    }
+
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=4, ensure_ascii=False)
+        logger.info(f"Saved detailed ABSA evaluation results to {output_file}")
+
+    return results
+
