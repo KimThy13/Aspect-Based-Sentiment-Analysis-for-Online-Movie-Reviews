@@ -3,6 +3,8 @@ from transformers import (
     T5Tokenizer, T5ForConditionalGeneration,
     BartTokenizer, BartForConditionalGeneration
 )
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformers import default_data_collator
@@ -17,8 +19,10 @@ class Predictor:
             self.tokenizer = T5Tokenizer.from_pretrained(model_path)
             self.model = T5ForConditionalGeneration.from_pretrained(model_path).to(self.device)
         elif "bart" in (model_path).lower():
-            self.tokenizer = BartTokenizer.from_pretrained(model_path)
-            self.model = BartForConditionalGeneration.from_pretrained(model_path).to(self.device)
+            # self.tokenizer = BartTokenizer.from_pretrained(model_path)
+            # self.model = BartForConditionalGeneration.from_pretrained(model_path).to(self.device)
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
         else:
             raise ValueError(f"Unsupported model type in {model_path}")
 

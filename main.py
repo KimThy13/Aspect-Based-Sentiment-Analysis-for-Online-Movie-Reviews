@@ -18,15 +18,17 @@ from src.utils.predictor import Predictor
 from src.utils.evaluator import evaluate_component_outputs, evaluate_absa_outputs, evaluate_component_outputs_by_sentence, evaluate_absa_detailed
 from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import Seq2SeqTrainerWrapper
-
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 def load_model_and_tokenizer(model_path_or_name):
     if "t5" in str(model_path_or_name).lower():
         tokenizer = T5Tokenizer.from_pretrained(model_path_or_name, legacy=True)
         model = T5ForConditionalGeneration.from_pretrained(model_path_or_name)
     elif "bart" in str(model_path_or_name).lower():
-        tokenizer = BartTokenizer.from_pretrained(model_path_or_name)
-        model = BartForConditionalGeneration.from_pretrained(model_path_or_name)
+        # tokenizer = BartTokenizer.from_pretrained(model_path_or_name)
+        # model = BartForConditionalGeneration.from_pretrained(model_path_or_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)
     else:
         raise ValueError(f"Unsupported model type in {model_path_or_name}")
     return tokenizer, model
