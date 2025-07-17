@@ -176,6 +176,14 @@ if __name__ == "__main__":
         current_file = current_file.parent
     ROOT_DIR = current_file
 
+    def is_hf_model_name(model_path):
+        return isinstance(model_path, str) and (
+            model_path.startswith("t5") or
+            model_path.startswith("facebook/") or
+            model_path.startswith("google/") or
+            model_path.count("/") == 1  # namespace/model
+        )
+    
     parser.add_argument("--prepare_data", action="store_true", help="Prepare and split dataset")
     parser.add_argument("--train_component", action="store_true", help="Train component extraction model")
     parser.add_argument("--eval_component", action="store_true", help="Evaluate component extraction model")
@@ -203,10 +211,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+
+
+    if not is_hf_model_name(args.component_model_path):
+        args.component_model_path = ROOT_DIR / args.component_model_path
+    if not is_hf_model_name(args.absa_model_path):
+        args.absa_model_path = ROOT_DIR / args.absa_model_path
     args.raw_data_path = ROOT_DIR / args.raw_data_path
     args.save_dir = ROOT_DIR / args.save_dir
-    args.component_model_path = ROOT_DIR / args.component_model_path
-    args.absa_model_path = ROOT_DIR / args.absa_model_path
     args.pipeline_input = ROOT_DIR / args.pipeline_input
     args.pipeline_output = ROOT_DIR / args.pipeline_output
+
     main(args)
