@@ -18,7 +18,7 @@ class Predictor:
         if "t5" in str(model_path).lower():
             self.tokenizer = T5Tokenizer.from_pretrained(model_path)
             self.model = T5ForConditionalGeneration.from_pretrained(model_path).to(self.device)
-        elif "bart" in (model_path).lower():
+        elif "bart" in str(model_path).lower():
             # self.tokenizer = BartTokenizer.from_pretrained(model_path)
             # self.model = BartForConditionalGeneration.from_pretrained(model_path).to(self.device)
             tokenizer = AutoTokenizer.from_pretrained(model_path)
