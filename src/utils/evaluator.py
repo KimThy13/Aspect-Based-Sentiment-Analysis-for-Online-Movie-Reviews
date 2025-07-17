@@ -2,6 +2,7 @@ import re
 import json
 import nltk
 import logging
+import evaluate
 from sklearn.metrics import f1_score, accuracy_score
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
@@ -35,6 +36,16 @@ def evaluate_component_outputs(predictions, references, output_file=None):
     if len(predictions) == len(references):
         exact_match_acc = sum(p.strip() == r.strip() for p, r in zip(predictions, references)) / len(predictions)
         results["exact_match"] = exact_match_acc
+
+        rouge = evaluate.load("rouge")
+        rouge_scores = rouge.compute(predictions=predictions, references=references)
+
+        logger.info("ROUGE Scores (only if lengths match):")
+        for k, v in rouge_scores.items():
+            logger.info(f"{k}: {v:.4f}")
+        logger.info(f"Exact Match: {exact_match_acc:.4f}")
+
+        results.update(rouge_scores)
 
     if output_file:
         with open(output_file, "w", encoding="utf-8") as f:
@@ -120,13 +131,7 @@ def evaluate_absa_outputs(target_texts, predicted_texts, output_file=None):
         for f in fields
     }
 
-    other_metrics = {
-        "aspect_acc": accuracy_score([t['aspect'] for t in true_parts], [p['aspect'] for p in pred_parts]),
-        "sentiment_acc": accuracy_score([t['sentiment'] for t in true_parts], [p['sentiment'] for p in pred_parts]),
-        "exact_match_acc": sum(t == p for t, p in zip(true_parts, pred_parts)) / len(true_parts)
-    }
-
-    results = {**f1_scores, **other_metrics}
+    results = {**f1_scores}
 
     if output_file:
         with open(output_file, "w", encoding="utf-8") as f:
