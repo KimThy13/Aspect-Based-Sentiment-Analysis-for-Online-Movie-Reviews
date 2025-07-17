@@ -37,8 +37,6 @@ class Seq2SeqTrainerWrapper:
             learning_rate=self.lr,
             warmup_steps=self.warmup_steps,
             weight_decay=self.weight_decay,
-            # evaluation_strategy="epoch",  # optional: evaluate every epoch
-            # predict_with_generate=True     # ensures decoding during eval
         )
 
         data_collator = DataCollatorForSeq2Seq(self.tokenizer, model=self.model)

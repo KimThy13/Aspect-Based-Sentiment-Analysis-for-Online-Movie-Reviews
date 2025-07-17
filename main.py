@@ -21,10 +21,10 @@ from src.utils.trainer import Seq2SeqTrainerWrapper
 
 
 def load_model_and_tokenizer(model_path_or_name):
-    if "t5" in model_path_or_name.lower():
+    if "t5" in str(model_path_or_name).lower():
         tokenizer = T5Tokenizer.from_pretrained(model_path_or_name, legacy=True)
         model = T5ForConditionalGeneration.from_pretrained(model_path_or_name)
-    elif "bart" in model_path_or_name.lower():
+    elif "bart" in str(model_path_or_name).lower():
         tokenizer = BartTokenizer.from_pretrained(model_path_or_name)
         model = BartForConditionalGeneration.from_pretrained(model_path_or_name)
     else:
