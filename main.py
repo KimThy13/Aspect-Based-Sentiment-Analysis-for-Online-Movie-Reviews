@@ -20,10 +20,18 @@ from src.pipeline.run_pipeline import run_absa_pipeline
 from src.utils.trainer import Seq2SeqTrainerWrapper
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+
 def load_model_and_tokenizer(model_path_or_name):
     tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)
+
+    # Try to load from safetensors if available
+    try:
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name, use_safetensors=True)
+    except Exception:
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)  # fallback
+
     return tokenizer, model
+
 
 def detect_model_type(model_path_or_name):
     name = str(model_path_or_name).lower()
