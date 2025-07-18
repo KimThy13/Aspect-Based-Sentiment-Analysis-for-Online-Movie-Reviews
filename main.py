@@ -21,19 +21,26 @@ from src.utils.trainer import Seq2SeqTrainerWrapper
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 def load_model_and_tokenizer(model_path_or_name):
-    if "t5" in str(model_path_or_name).lower():
-        tokenizer = T5Tokenizer.from_pretrained(model_path_or_name, legacy=True)
-        model = T5ForConditionalGeneration.from_pretrained(model_path_or_name)
-    elif "bart" in str(model_path_or_name).lower():
-        # tokenizer = BartTokenizer.from_pretrained(model_path_or_name)
-        # model = BartForConditionalGeneration.from_pretrained(model_path_or_name)
-        tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)
-    else:
-        raise ValueError(f"Unsupported model type in {model_path_or_name}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)
     return tokenizer, model
 
+def detect_model_type(model_path_or_name):
+    name = str(model_path_or_name).lower()
+    if "t5" in name:
+        return "t5"
+    elif "bart" in name:
+        return "bart"
+    else:
+        raise ValueError(f"Cannot detect model type from path: {model_path_or_name}")
+
+
+
 def main(args):
+    # Detect model types
+    component_model_type = detect_model_type(args.component_model_path)
+    absa_model_type = detect_model_type(args.absa_model_path)
+
     # Step 1: Prepare dataset (split into train/val/test)
     if args.prepare_data:
         prepare_and_save_datasets(args.raw_data_path, args.save_dir)
@@ -48,7 +55,7 @@ def main(args):
             raw_comp_dataset = load_dataset_from_folder(args.save_dir)
 
             processed_comp_dataset = raw_comp_dataset.map(
-                preprocess_component,
+                partial(preprocess_component, model_type=component_model_type),
                 batched=True,
                 remove_columns=raw_comp_dataset["train"].column_names
             )
@@ -110,7 +117,7 @@ def main(args):
             raw_absa_dataset = load_dataset_from_folder(args.save_dir)
 
             processed_absa_dataset = raw_absa_dataset.map(
-                preprocess_absa,
+                partial(preprocess_absa, model_type=absa_model_type),
                 batched=True,
                 remove_columns=raw_absa_dataset["train"].column_names
             )
@@ -175,6 +182,8 @@ if __name__ == "__main__":
     while current_file.name != "Aspect-Based-Sentiment-Analysis-for-Online-Movie-Reviews":
         current_file = current_file.parent
     ROOT_DIR = current_file
+
+    
 
     def is_hf_model_name(model_path):
         return isinstance(model_path, str) and (

@@ -3,15 +3,14 @@ import torch
 import pandas as pd
 from tqdm import tqdm
 import chardet
+from datasets import Dataset
 
 from src.utils.predictor import Predictor
 from transformers import default_data_collator
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-from datasets import Dataset
 
 def parse_absa_output(output_str):
-    """Convert ABSA output string to structured dict."""
+    """Convert ABSA output string to a structured dictionary."""
     try:
         parts = {
             "aspect": output_str.split("aspect:")[1].split(",")[0].strip(),
@@ -23,15 +22,33 @@ def parse_absa_output(output_str):
     except Exception:
         return {"aspect": None, "aspect_term": None, "opinion_term": None, "sentiment": None}
 
-# build component prompt and tokenize
-def prepare_component_inputs(reviews, tokenizer, max_len=512):
-    prompts = []
+
+def detect_model_type(model_path_or_name):
+    """Detects whether the model is T5 or BART based on its name or path."""
+    name = str(model_path_or_name).lower()
+    if "t5" in name:
+        return "t5"
+    elif "bart" in name:
+        return "bart"
+    else:
+        raise ValueError(f"Cannot detect model type from path: {model_path_or_name}")
+
+
+def prepare_component_inputs(reviews, tokenizer, model_type="t5", max_len=512):
+    """
+    Tokenizes input reviews for component extraction phase.
+    Uses task prompt only if model is T5.
+    """
+    inputs = []
     for r in reviews:
         cleaned = str(r).replace("\n", " ").strip()
-        prompts.append(f"Extract component sentences: {cleaned}") # prompt
+        if model_type == "t5":
+            inputs.append(f"Extract component sentences: {cleaned}")
+        else:
+            inputs.append(cleaned)
 
     enc = tokenizer(
-        prompts,
+        inputs,
         padding="max_length",
         truncation=True,
         max_length=max_len,
@@ -40,19 +57,24 @@ def prepare_component_inputs(reviews, tokenizer, max_len=512):
     dataset_dict = {
         "input_ids": enc["input_ids"],
         "attention_mask": enc["attention_mask"],
-        "input_text": prompts,  # optional – nếu predict() cần check
+        "input_text": inputs
     }
 
     return Dataset.from_dict(dataset_dict)
 
-# build prompt for absa
-def build_absa_prompt(text: str) -> str:
-    return (
-        f"Extract aspect, aspect term, sentiment, and opinion term from: {text.strip()}"
-    )
+
+def build_absa_prompt(text: str, model_type: str) -> str:
+    """
+    Builds the input prompt for ABSA prediction.
+    For T5: uses a task-specific instruction.
+    For BART: uses the raw sentence.
+    """
+    if model_type == "t5":
+        return f"Extract aspect, aspect term, sentiment, and opinion term from: {text.strip()}"
+    else:
+        return text.strip()
 
 
-# main pipeline including 2 phases
 def run_absa_pipeline(
     input_csv: str,
     output_csv: str,
@@ -60,7 +82,7 @@ def run_absa_pipeline(
     absa_model_path: str,
     max_len: int = 512,
 ):
-    # Read file csv and detect encoding
+    # Detect encoding of input CSV file
     with open(input_csv, "rb") as f:
         raw = f.read(100_000)
         encoding = chardet.detect(raw)["encoding"] or "utf-8-sig"
@@ -71,26 +93,28 @@ def run_absa_pipeline(
 
     reviews = df["review"].fillna("").tolist()
 
-    # Load model (read from model path)
+    # Load models
     component_predictor = Predictor(component_model_path)
     absa_predictor = Predictor(absa_model_path)
 
-    # Prepare dataset for component model
+    # Detect model types
+    component_model_type = detect_model_type(component_model_path)
+    absa_model_type = detect_model_type(absa_model_path)
+
+    # Prepare input for component prediction
     tokenized_dataset = prepare_component_inputs(
-        reviews, component_predictor.tokenizer, max_len=max_len
+        reviews, component_predictor.tokenizer, model_type=component_model_type, max_len=max_len
     )
 
-    # Predict component sentences
-    comp_outputs = component_predictor.predict(tokenized_dataset)  # list[list[str]]
+    # Run component sentence prediction
+    comp_outputs = component_predictor.predict(tokenized_dataset)  # List[List[str]]
 
     results = []
     for full_review, comp_list in tqdm(
         zip(reviews, comp_outputs), total=len(reviews), desc="ABSA pipeline"
     ):
-        # comp_list is the list of component sentences in a full review
         for comp in comp_list:
-            # Prompt ABSA
-            absa_prompt = build_absa_prompt(comp)
+            absa_prompt = build_absa_prompt(comp, absa_model_type)
             absa_pred = absa_predictor.predict_single(absa_prompt)
             parsed = parse_absa_output(absa_pred)
             results.append({
@@ -102,6 +126,6 @@ def run_absa_pipeline(
                 "sentiment": parsed["sentiment"]
             })
 
-    # saving the result
+    # Save results to CSV
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     pd.DataFrame(results).to_csv(output_csv, index=False)
