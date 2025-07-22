@@ -48,7 +48,7 @@ The pipeline consists of two main phases:
 ```bash
 python clean_reviews.py --input data/raw/raw_reviews.csv --output data/raw/full_dataset.csv
 ```
-### 2. Prepare Data Splits
+### 2. Prepare Data
 ```bash
 python src/utils/prepare_data.py --input data/raw/full_dataset.csv --output data/processed/
 ```
