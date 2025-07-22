@@ -23,8 +23,6 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 def load_model_and_tokenizer(model_path_or_name):
     tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-
-    # Try to load from safetensors if available
     try:
         model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name, use_safetensors=True)
     except Exception:
@@ -210,8 +208,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--raw_data_path", type=str, default="data/raw/full_dataset.csv")
     parser.add_argument("--save_dir", type=str, default="data/processed")
-    parser.add_argument("--component_model_path", type=str, default="models/t5_component_extraction")
-    parser.add_argument("--absa_model_path", type=str, default="models/t5_absa")
+    parser.add_argument("--component_model_path", type=str, default="models/component_extraction")
+    parser.add_argument("--absa_model_path", type=str, default="models/absa")
     parser.add_argument("--pipeline_input", type=str, default="data/raw/full_reviews.csv")
     parser.add_argument("--pipeline_output", type=str, default="pipeline/output.csv")
 
