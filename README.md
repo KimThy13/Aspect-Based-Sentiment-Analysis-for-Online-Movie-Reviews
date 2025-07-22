@@ -46,27 +46,27 @@ The pipeline consists of two main phases:
 
 ### 1. Clean Raw Reviews (Optional)
 ```bash
-python clean\_reviews.py --input data/raw/raw\_reviews.csv --output data/raw/full\_dataset.csv
+python clean_reviews.py --input data/raw/raw_reviews.csv --output data/raw/full_dataset.csv
 ```
 ### 2. Prepare Data Splits
 ```bash
-python src/utils/prepare\_data.py --input data/raw/full\_dataset.csv --output data/processed/
+python src/utils/prepare_data.py --input data/raw/full_dataset.csv --output data/processed/
 ```
 ### 3. Train and Evaluate Models
 ```bash
-python main.py;
-\--prepare\_data
-\--train\_component
-\--eval\_component
-\--train\_absa
-\--eval\_absa
+python main.py \
+  --prepare_data \
+  --train_component \
+  --eval_component \
+  --train_absa \
+  --eval_absa
 ```
 ### 4. Run Full Pipeline on New Reviews
 ```bash
-python main.py
-\--run\_pipeline
-\--pipeline\_input data/raw/full\_reviews.csv
-\--pipeline\_output pipeline/output.csv
+python main.py \
+  --run_pipeline \
+  --pipeline_input data/raw/full_reviews.csv \
+  --pipeline_output pipeline/output.csv
 ```
 ## Model Settings
 
@@ -108,7 +108,7 @@ pip install -r requirements.txt
 
 This project is part of the graduation thesis by:
 
-**Nguyễn Hải Ngọc Huyền**
+**Nguyễn Hải Ngọc Huyền**\\
 **Tạ Hoàng Kim Thy**
 University of Science, VNU-HCM
 Major: Data Science, Class of 2025
