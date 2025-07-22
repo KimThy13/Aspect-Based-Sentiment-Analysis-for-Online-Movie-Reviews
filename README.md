@@ -55,17 +55,17 @@ python src/utils/prepare\_data.py --input data/raw/full\_dataset.csv --output da
 ### 3. Train and Evaluate Models
 ```bash
 python main.py;
-\--prepare\_data;
-\--train\_component;
-\--eval\_component;
-\--train\_absa;
+\--prepare\_data
+\--train\_component
+\--eval\_component
+\--train\_absa
 \--eval\_absa
 ```
 ### 4. Run Full Pipeline on New Reviews
 ```bash
-python main.py;
-\--run\_pipeline;
-\--pipeline\_input data/raw/full\_reviews.csv;
+python main.py
+\--run\_pipeline
+\--pipeline\_input data/raw/full\_reviews.csv
 \--pipeline\_output pipeline/output.csv
 ```
 ## Model Settings
