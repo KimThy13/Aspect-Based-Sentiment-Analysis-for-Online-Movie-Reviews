@@ -21,25 +21,44 @@ The pipeline consists of two main phases:
 
 ```
 .
-├── main.py                         # Main controller for training, evaluation, and pipeline execution
-├── clean_reviews.py               # Script to clean raw review text
+project/
+│
 ├── data/
-│   ├── raw/                       # Raw input CSV files
-│   ├── processed/                # Output of data splitting (train/val/test)
-│   └── preprocessed/             # Tokenized datasets for Phase 1 and 2
-├── models/                        # Fine-tuned models
-├── pipeline/                      # Output from end-to-end pipeline
-├── src/
-│   ├── phase1_component_extraction/
-│   │   └── preprocess.py         # Preprocessing logic for Phase 1
-│   ├── phase2_aspect_extraction/
-│   │   └── preprocess.py         # Preprocessing logic for Phase 2
-│   └── utils/
-│       ├── prepare_data.py       # Train/val/test splitting logic
-│       ├── data_loader.py        # Load datasets using HuggingFace DatasetDict
-│       ├── trainer.py            # Training wrapper using Seq2SeqTrainer
-│       ├── predictor.py          # Prediction module
-│       └── evaluator.py          # Evaluation metrics
+│   ├── raw/                             # Raw CSV data uploaded by the user
+│   │   └── full_reviews.csv
+│   ├── processed/                       
+│   └── preprocessed/                    # Split + tokenized datasets ready for training
+│
+├── models/
+│   ├── component_extraction/         # Trained model checkpoints for component extraction
+│   └── absa/                         # Trained model checkpoints for ABSA extraction
+│
+├── phase1_component_extraction/
+│   └── preprocess.py                    # Preprocessing for component data
+├── phase2_absa_extraction/
+│   └── preprocess.py                    # Preprocessing for ABSA data
+│
+├── pipeline/
+│   └── run_pipeline.py                  # Full pipeline: raw input → final ABSA results
+│
+├── utils/
+│   ├── clean_data.py                   # Cleaning data
+│   ├── data_loader.py                   # Load preprocessed tokenized datasets
+│   ├── prepare_data.py                  # Load and format raw CSV to usable datasets
+│   ├── evaluator.py                     # Evaluation functions for ABSA predictions
+│   ├── trainer.py                       # Generic T5 trainer for both phases
+│   ├── logger.py                       # logging
+│   └── predictor.py                     # Inference script
+│
+├── config/                              # (Optional) Hyperparameter and model config files
+│   ├── component_config.json
+│   ├── absa_config.json
+│   └── pipeline_config.json
+│
+├── main.py                              # Central CLI for training/inference/pipeline
+├── requirements.txt                     # Required Python packages
+├── .gitignore                           # Ignore cache, models, logs, etc.
+└── README.md                            # Project documentation
 ```
 
 ## Quick Start
