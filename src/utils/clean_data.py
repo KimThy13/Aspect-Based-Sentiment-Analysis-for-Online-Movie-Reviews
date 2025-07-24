@@ -47,20 +47,97 @@ EMOJI_PATTERN = re.compile(
 
 # Expand common English contractions and informal abbreviations into their full forms
 def expand_abbreviations(text):
-    abbreviations = {
-        "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is", "it's": "it is",
-        "we're": "we are", "they're": "they are", "i've": "i have", "you've": "you have",
-        "we've": "we have", "they've": "they have", "can't": "cannot", "won't": "will not",
-        "don't": "do not", "doesn't": "does not", "didn't": "did not", "isn't": "is not",
-        "aren't": "are not", "wasn't": "was not", "weren't": "were not", "shouldn't": "should not",
-        "wouldn't": "would not", "couldn't": "could not", "mustn't": "must not", "shan't": "shall not",
-        "let's": "let us", "that's": "that is", "who's": "who is", "what's": "what is", "where's": "where is",
-        "there's": "there is", "how's": "how is", "y'all": "you all", "gonna": "going to",
-        "wanna": "want to", "gotta": "got to"
+  abbreviations = {
+    "he's": "he is", "He's": "He is",
+    "she's": "she is", "She's": "She is",
+    "it's": "it is", "It's": "It is",
+    "that's": "that is", "That's": "That is",
+    "there's": "there is", "There's": "There is",
+    "what's": "what is", "What's": "What is",
+    "where's": "where is", "Where's": "Where is",
+    "who's": "who is", "Who's": "Who is",
+    "how's": "how is", "How's": "How is",
+
+    "i'm": "i am", "I'm": "I am",
+    "i've": "i have", "I've": "I have",
+    "i'd": "i would", "I'd": "I would",
+    "i'll": "i will", "I'll": "I will",
+
+    "U're": "you are", "u're": "you are",
+    "U": "you", "u": "you",
+    "you're": "you are", "You're": "You are",
+    "you've": "you have", "You've": "You have",
+    "you'd": "you would", "You'd": "You would",
+    "you'll": "you will", "You'll": "You will",
+
+    "we're": "we are", "We're": "We are",
+    "we've": "we have", "We've": "We have",
+    "we'd": "we would", "We'd": "We would",
+    "we'll": "we will", "We'll": "We will",
+
+    "they're": "they are", "They're": "They are",
+    "they've": "they have", "They've": "They have",
+    "they'd": "they would", "They'd": "They would",
+    "they'll": "they will", "They'll": "They will",
+
+    "he'd": "he would", "He'd": "He would",
+    "he'll": "he will", "He'll": "He will",
+    "she'd": "she would", "She'd": "She would",
+    "she'll": "she will", "She'll": "She will",
+    "it'd": "it would", "It'd": "It would",
+    "it'll": "it will", "It'll": "It will",
+
+    "let's": "let us", "Let's": "Let us",
+    "can't": "cannot", "Can't": "Cannot",
+    "couldn't": "could not", "Couldn't": "Could not",
+    "wouldn't": "would not", "Wouldn't": "Would not",
+    "shouldn't": "should not", "Shouldn't": "Should not",
+    "won't": "will not", "Won't": "Will not",
+    "don't": "do not", "Don't": "Do not",
+    "doesn't": "does not", "Doesn't": "Does not",
+    "didn't": "did not", "Didn't": "Did not",
+    "haven't": "have not", "Haven't": "Have not",
+    "hasn't": "has not", "Hasn't": "Has not",
+    "hadn't": "had not", "Hadn't": "Had not",
+    "hadnt": "had not", "Hadnt": "Had not",
+    "isnt": "is not", "Isn't": "Is not",
+    "aren't": "are not", "Aren't": "Are not",
+    "isn't": "is not", "Isn't": "Is not",
+    "wasn't": "was not", "Wasn't": "Was not",
+    "weren't": "were not", "Weren't": "Were not",
+    "ain't": "am not", "Ain't": "Am not",
+
+    "y'all": "you all", "Y'all": "You all",
+    "mustn't": "must not", "Mustn't": "Must not",
+    "needn't": "need not", "Needn't": "Need not",
+    "shan't": "shall not", "Shan't": "Shall not",
+
+    "dunno": "do not know", "Dunno": "Do not know",
+    "gimme": "give me", "Gimme": "Give me",
+    "gonna": "going to", "Gonna": "Going to",
+    "gotta": "got to", "Gotta": "Got to",
+    "lemme": "let me", "Lemme": "Let me",
+    "wanna": "want to", "Wanna": "Want to",
+    "y'know": "you know", "Y'know": "You know",
+    "c'mon": "come on", "C'mon": "Come on",
+    "yup": "yes", "Yup": "Yes",
+    "nah": "no", "Nah": "No",
+    "o'clock": "of the clock", "O'clock": "Of the clock",
+
+    "how'd": "how did", "How'd": "How did",
+    "how'll": "how will", "How'll": "How will",
+    "how's": "how is", "How's": "How is",
+    "when's": "when is", "When's": "When is",
+    "where'd": "where did", "Where'd": "Where did",
+    "where'll": "where will", "Where'll": "Where will",
+    "where's": "where is", "Where's": "Where is",
+    "why'd": "why did", "Why'd": "Why did",
+    "why'll": "why will", "Why'll": "Why will",
+    "why's": "why is", "Why's": "Why is"
     }
-    for abb, full in abbreviations.items():
-        text = re.sub(r'\b' + re.escape(abb) + r'\b', full, text, flags=re.IGNORECASE)
-    return text
+  for abb, full in abbreviations.items():
+      text = re.sub(r'\b' + re.escape(abb) + r'\b', full, text)
+  return text
 
 def clean_text(text):
     """
