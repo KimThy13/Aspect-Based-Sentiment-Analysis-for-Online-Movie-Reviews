@@ -6,4 +6,3 @@ __pycache__/
 models/
 *.ckpt
 *.pt
-*.csv
