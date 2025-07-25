@@ -50,6 +50,11 @@ project/
 │   ├── logger.py                       # logging
 │   └── predictor.py                     # Inference script
 │
+├──outputs/
+│   ├── component_model/              # Saved fine-tuned component model
+│   ├── absa_model/                   # Saved fine-tuned ABSA model
+│   ├── component_result/             # Predictions and metrics of component extraction
+│   └── absa_result/                  # Predictions and metrics of ABSA extraction
 │
 ├── main.py                              # Central CLI for training/inference/pipeline
 ├── requirements.txt                     # Required Python packages
