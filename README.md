@@ -73,10 +73,11 @@ python clean_reviews.py --input data/raw/raw_reviews.csv --output data/raw/full_
 python src/utils/prepare_data.py --input data/raw/full_dataset.csv --output data/processed/
 ```
 ### 3. Train and Evaluate Models
-Huấn luyện và đánh giá cả hai giai đoạn:
+Train and evaluate both stages:
 
-- Giai đoạn 1: Component Extraction
-- Giai đoạn 2: ABSA Prediction
+- Stage 1: Component Extraction
+
+- Stage 2: ABSA Prediction
 
 ```bash
 python main.py \
@@ -95,11 +96,8 @@ python main.py \
 
 ---
 ### 4. Run Full Pipeline on New Reviews
-Train and evaluate both stages:
 
-- Stage 1: Component Extraction
-
-- Stage 2: ABSA Prediction
+Run full pipeline from raw reviews → component → ABSA:
 ```bash
 python main.py \
   --run_pipeline \
