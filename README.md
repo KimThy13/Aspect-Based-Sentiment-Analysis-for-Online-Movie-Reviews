@@ -25,7 +25,7 @@ project/
 │
 ├── data/
 │   ├── raw/                             # Raw CSV data uploaded by the user
-│   │   └── full_reviews.csv
+│   │   └── absa_reviews.csv
 │   ├── processed/                       
 │   └── preprocessed/                    # Split + tokenized datasets ready for training
 │
@@ -50,10 +50,6 @@ project/
 │   ├── logger.py                       # logging
 │   └── predictor.py                     # Inference script
 │
-├── config/                              # (Optional) Hyperparameter and model config files
-│   ├── component_config.json
-│   ├── absa_config.json
-│   └── pipeline_config.json
 │
 ├── main.py                              # Central CLI for training/inference/pipeline
 ├── requirements.txt                     # Required Python packages
