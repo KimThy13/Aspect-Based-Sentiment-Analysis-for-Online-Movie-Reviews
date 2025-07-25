@@ -145,7 +145,7 @@ Output format: a list of shorter sentences focusing on specific parts/aspects of
 
 ```
 Input: The acting was great but the plot was too slow.
-Output: ["The acting was great", "the plot was too slow"]
+Output: ["The acting was great ; the plot was too slow"]
 ```
 
 ### 🔹 ABSA Extraction (Phase 2)
