@@ -192,8 +192,11 @@ pip install -r requirements.txt
 This project was developed as part of the undergraduate thesis by:
 
 **Nguyễn Hải Ngọc Huyền**
+
 **Tạ Hoàng Kim Thy**
+
 University of Science, Vietnam National University - Ho Chi Minh City (VNU-HCM)
+
 Major: Data Science — Class of 2025
 
 
