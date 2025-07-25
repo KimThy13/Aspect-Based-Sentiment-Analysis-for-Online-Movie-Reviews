@@ -12,9 +12,9 @@ The pipeline consists of two main phases:
 2. **Aspect-Based Sentiment Analysis (ABSA)**
    For each component sentence, the model extracts:
 
-   * `aspect`: the aspect category (e.g., `Movie::Plot`)
-   * `aspect term`: the word or phrase referring to the aspect
-   * `opinion term`: the opinionated word or phrase
+   * `aspect`: the aspect category (e.g., `Movie`)
+   * `aspect term`: the word or phrase referring to the aspect (e.g., `movie, film,..`)
+   * `opinion term`: the opinionated word or phrase (e.g., `bad, good,..`)
    * `sentiment`: the sentiment polarity (`Positive`, `Negative`, `Neutral`)
 
 ## Project Structure
@@ -72,37 +72,101 @@ python clean_reviews.py --input data/raw/raw_reviews.csv --output data/raw/full_
 python src/utils/prepare_data.py --input data/raw/full_dataset.csv --output data/processed/
 ```
 ### 3. Train and Evaluate Models
+Huấn luyện và đánh giá cả hai giai đoạn:
+
+- Giai đoạn 1: Component Extraction
+- Giai đoạn 2: ABSA Prediction
+
 ```bash
 python main.py \
   --prepare_data \
   --train_component \
   --eval_component \
   --train_absa \
-  --eval_absa
+  --eval_absa \
+  --component_model_type t5 \
+  --absa_model_type bart
 ```
+📌 Option:
+
+- `--component_model_type` and `--absa_model_type`: `t5` of `bart`
+- The results and output model will be saved at `outputs/`
+
+---
 ### 4. Run Full Pipeline on New Reviews
+Train and evaluate both stages:
+
+- Stage 1: Component Extraction
+
+- Stage 2: ABSA Prediction
 ```bash
 python main.py \
   --run_pipeline \
   --pipeline_input data/raw/full_reviews.csv \
-  --pipeline_output pipeline/output.csv
+  --pipeline_output pipeline/output.csv \
+  --component_model_type bart \
+  --absa_model_type t5
 ```
-## Model Settings
+
+📄 `pipeline/output.csv` will contain: | full\_review | component | aspect | aspect\_term | opinion\_term | sentiment |
+
+---
+
+### Training Configuration (Optional)
+
+| Flag              | Default | Description                                             |
+| ----------------- | ------- | ------------------------------------------------------- |
+| `--epochs`        | 20      | Number of training epochs                               |
+| `--batch_size`    | 8       | Batch size per device                                   |
+| `--lr`            | 3e-4    | Learning rate                                           |
+| `--warmup_steps`  | 500     | Warm-up steps for learning rate scheduler               |
+| `--weight_decay`  | 0.01    | Weight decay coefficient for optimizer (regularization) |
+| `--save_strategy` | epoch   | When to save checkpoints (`epoch`, `steps`, etc.)       |
+| `--max_length`    | 64      | Maximum generation length for predictions               |
+| `--num_beams`     | 4       | Number of beams used in beam search (generation)        |
+| `--output_dir`    | outputs | Directory to save models and evaluation results         |
+
+---
+
+## ⚙️ Model Settings
 
 * Architectures: T5-base, BART-base
-* Epochs: 20
-* Batch size: 8
-* Learning rate: 3e-4
-* Optimizer: AdamW
-* Beam search: 4
 * Evaluation: Precision, Recall, F1-score, BLEU, ROUGE
 
-## Output Format
-```bash
-Each ABSA prediction is returned as a single string in the following format:
+---
 
+## 📝 Output Format
+
+### 🔹 Component Extraction (Phase 1)
+
+Each input review is split into one or more **component sentences**.
+Output format: a list of shorter sentences focusing on specific parts/aspects of the review.
+
+**Example:**
+
+```
+Input: The acting was great but the plot was too slow.
+Output: ["The acting was great", "the plot was too slow"]
+```
+
+### 🔹 ABSA Extraction (Phase 2)
+
+Each component sentence is converted into a structured string that captures the sentiment context.
+
+**Format:**
+
+```
+aspect: <category>, aspect term: <term>, opinion term: <term>, sentiment: <label>
+```
+
+**Example:**
+
+```
 aspect: Acting, aspect term: acting, opinion term: superb, sentiment: Positive
 ```
+
+---
+
 ## Requirements
 
 Install dependencies via:

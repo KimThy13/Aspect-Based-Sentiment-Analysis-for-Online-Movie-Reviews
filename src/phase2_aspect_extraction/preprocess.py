@@ -1,6 +1,6 @@
 import torch
 
-def preprocess_absa(examples, model_type="t5"):
+def preprocess_absa(examples, model_type):
     """
     Prepares input_text and target_text for Aspect-Based Sentiment Analysis (ABSA).
     Supports both T5 (with prompt) and BART (raw sentence).

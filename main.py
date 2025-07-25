@@ -21,31 +21,32 @@ from src.utils.trainer import Seq2SeqTrainerWrapper
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 
-def load_model_and_tokenizer(model_path_or_name):
-    tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-    try:
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name, use_safetensors=True)
-    except Exception:
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_path_or_name)  # fallback
+def load_model_and_tokenizer(model_path_or_name, model_type):
+    if model_type == "t5":
+        tokenizer = T5Tokenizer.from_pretrained(model_path_or_name)
+        try:
+            model = T5ForConditionalGeneration.from_pretrained(model_path_or_name, use_safetensors=True)
+        except Exception:
+            model = T5ForConditionalGeneration.from_pretrained(model_path_or_name)
+    elif model_type == "bart":
+        tokenizer = BartTokenizer.from_pretrained(model_path_or_name)
+        try:
+            model = BartForConditionalGeneration.from_pretrained(model_path_or_name, use_safetensors=True)
+        except Exception:
+            model = BartForConditionalGeneration.from_pretrained(model_path_or_name)
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
 
     return tokenizer, model
 
-
-def detect_model_type(model_path_or_name):
-    name = str(model_path_or_name).lower()
-    if "t5" in name:
-        return "t5"
-    elif "bart" in name:
-        return "bart"
-    else:
-        raise ValueError(f"Cannot detect model type from path: {model_path_or_name}")
 
 
 
 def main(args):
     # Detect model types
-    component_model_type = detect_model_type(args.component_model_path)
-    absa_model_type = detect_model_type(args.absa_model_path)
+    component_model_type = args.component_model_type
+    absa_model_type = args.absa_model_type
+
 
     # Step 1: Prepare dataset (split into train/val/test)
     if args.prepare_data:
@@ -55,7 +56,7 @@ def main(args):
     if args.train_component or args.eval_component:
         comp_path = "data/preprocessed/component"
 
-        tokenizer, model = load_model_and_tokenizer(str(args.component_model_path))
+        tokenizer, model = load_model_and_tokenizer(str(args.component_model_path), component_model_type)
 
         if not os.path.exists(comp_path):
             raw_comp_dataset = load_dataset_from_folder(args.save_dir)
@@ -77,13 +78,19 @@ def main(args):
 
     # Step 3: Train component model
     if args.train_component:
-        absa_trainer = Seq2SeqTrainerWrapper(
+        component_trainer = Seq2SeqTrainerWrapper(
             model=model,
             tokenizer=tokenizer,
             dataset=tokenized_comp_dataset,
             **vars(args) 
         )
-        absa_trainer.train()
+        component_trainer.train()
+
+        os.makedirs(args.output_dir, exist_ok=True)
+        # Explicitly save fine-tuned ABSA model
+        component_model_output_dir = os.path.join(args.output_dir, "component_model")
+        os.makedirs(component_model_output_dir, exist_ok=True)
+        component_trainer.trainer.save_model(component_model_output_dir)  # save model + tokenizer
 
     # Step 4: Evaluate component extraction
     if args.eval_component:
@@ -91,7 +98,8 @@ def main(args):
             args.component_model_path,
             max_length=args.max_length,
             batch_size=args.batch_size,
-            num_beams=args.num_beams
+            num_beams=args.num_beams,
+            model_type = args.component_model_type
         )
         comp_test_inputs = tokenized_comp_dataset["test"]
         comp_test_refs = tokenized_comp_dataset["test"]["target_text"]
@@ -100,24 +108,29 @@ def main(args):
         comp_preds = [" ; ".join(p) if isinstance(p, list) else p for p in comp_preds]
         comp_test_refs = [" ; ".join(r) if isinstance(r, list) else r for r in comp_test_refs]
 
-        os.makedirs(args.save_dir, exist_ok=True)
+        # Tạo thư mục lưu kết quả component
+        component_result_dir = os.path.join(args.output_dir, "component_result")
+        os.makedirs(component_result_dir, exist_ok=True)
+
+        # Lưu prediction
         df = pd.DataFrame({
             "input": tokenized_comp_dataset["test"]["input_text"],
             "reference": comp_test_refs,
             "prediction": comp_preds
         })
-        df.to_csv(os.path.join(args.save_dir, "component_extraction_predictions.csv"), index=False)
+        df.to_csv(os.path.join(component_result_dir, "component_extraction_predictions.csv"), index=False)
 
-        component_eval_path = os.path.join(args.save_dir, "component_eval_results.json")
+        # Lưu metric
+        component_eval_path = os.path.join(component_result_dir, "component_eval_results.json")
+        component_eval_path_sentence = os.path.join(component_result_dir, "component_eval_sentence_level.json")
         evaluate_component_outputs(comp_preds, comp_test_refs, output_file=component_eval_path)
-        component_eval_path_sentence = os.path.join(args.save_dir, "component_eval_sentence_level.json")
         evaluate_component_outputs_by_sentence(comp_preds, comp_test_refs, output_file=component_eval_path_sentence)
 
     # Step 5: Preprocess ABSA dataset if needed    
     if args.train_absa or args.eval_absa:
         absa_path = "data/preprocessed/absa"
 
-        tokenizer, model = load_model_and_tokenizer(str(args.absa_model_path))
+        tokenizer, model = load_model_and_tokenizer(str(args.absa_model_path), absa_model_type)
 
         if not os.path.exists(absa_path):
             raw_absa_dataset = load_dataset_from_folder(args.save_dir)
@@ -147,30 +160,48 @@ def main(args):
         )
         absa_trainer.train()
 
+        os.makedirs(args.output_dir, exist_ok=True)
+        # Explicitly save fine-tuned ABSA model
+        absa_model_output_dir = os.path.join(args.output_dir, "absa_model")
+        os.makedirs(absa_model_output_dir, exist_ok=True)
+        absa_trainer.trainer.save_model(absa_model_output_dir)  # save model + tokenizer
+
     # Step 7: Evaluate ABSA model
     if args.eval_absa:
         absa_predictor = Predictor(
             args.absa_model_path,
             max_length=args.max_length,
             batch_size=args.batch_size,
-            num_beams=args.num_beams
+            num_beams=args.num_beams,
+            model_type=args.absa_model_type
         )
         absa_test_inputs = tokenized_absa_dataset["test"]
         absa_test_refs = tokenized_absa_dataset["test"]["target_text"]
         absa_preds = absa_predictor.predict(absa_test_inputs)
         absa_preds = [p[0].strip("[]").strip("'\"") if isinstance(p, list) else p.strip("[]").strip("'\"") for p in absa_preds]
 
-        os.makedirs(args.save_dir, exist_ok=True)
+        os.makedirs(args.output_dir, exist_ok=True)
+
+        # make direction to save the result
+        absa_result_dir = os.path.join(args.output_dir, "absa_result")
+        os.makedirs(absa_result_dir, exist_ok=True)
+
+        # path of output files
+        absa_pred_csv = os.path.join(absa_result_dir, "absa_extraction_predictions.csv")
+        absa_eval_path = os.path.join(absa_result_dir, "absa_eval_results.json")
+        absa_eval_detailed_path = os.path.join(absa_result_dir, "absa_detailed_metrics.json")
+
+
         df = pd.DataFrame({
             "input": tokenized_absa_dataset["test"]['input_text'],
             "reference": absa_test_refs,
             "prediction": absa_preds
         })
-        df.to_csv(os.path.join(args.save_dir, "absa_extraction_predictions.csv"), index=False)
+        df.to_csv(absa_pred_csv, index=False)
 
-        absa_eval_path = os.path.join(args.save_dir, "absa_eval_results.json")
+        # saving the evaluation
         evaluate_absa_outputs(absa_test_refs, absa_preds, output_file=absa_eval_path)
-        evaluate_absa_detailed(absa_test_refs, absa_preds, output_file="absa_detailed_metrics.json")
+        evaluate_absa_detailed(absa_test_refs, absa_preds, output_file=absa_eval_detailed_path)
 
     # Step 8: Run full ABSA pipeline on real reviews and export results
     if args.run_pipeline:
@@ -178,8 +209,14 @@ def main(args):
             input_csv=args.pipeline_input,
             output_csv=args.pipeline_output,
             component_model_path=args.component_model_path,
-            absa_model_path=args.absa_model_path
+            absa_model_path=args.absa_model_path,
+            component_model_type=args.component_model_type,
+            absa_model_type=args.absa_model_type,
+            max_len=args.max_length,
+            batch_size=args.batch_size,
+            num_beams=args.num_beams
         )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ABSA Pipeline Runner")
@@ -199,6 +236,11 @@ if __name__ == "__main__":
             model_path.count("/") == 1  # namespace/model
         )
     
+    parser.add_argument("--component_model_type", type=str, choices=["t5", "bart"], required=True,
+                    help="Model type for component extraction model (t5 or bart)")
+    parser.add_argument("--absa_model_type", type=str, choices=["t5", "bart"], required=True,
+                    help="Model type for ABSA model (t5 or bart)")
+    
     parser.add_argument("--prepare_data", action="store_true", help="Prepare and split dataset")
     parser.add_argument("--train_component", action="store_true", help="Train component extraction model")
     parser.add_argument("--eval_component", action="store_true", help="Evaluate component extraction model")
@@ -208,6 +250,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--raw_data_path", type=str, default="data/raw/full_dataset.csv")
     parser.add_argument("--save_dir", type=str, default="data/processed")
+    parser.add_argument("--output_dir", type=str, default="outputs", help="Directory to save models and evaluation results")
     parser.add_argument("--component_model_path", type=str, default="models/component_extraction")
     parser.add_argument("--absa_model_path", type=str, default="models/absa")
     parser.add_argument("--pipeline_input", type=str, default="data/raw/full_reviews.csv")

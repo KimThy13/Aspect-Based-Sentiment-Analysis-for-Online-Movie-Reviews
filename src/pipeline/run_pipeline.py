@@ -23,17 +23,6 @@ def parse_absa_output(output_str):
         return {"aspect": None, "aspect_term": None, "opinion_term": None, "sentiment": None}
 
 
-def detect_model_type(model_path_or_name):
-    """Detects whether the model is T5 or BART based on its name or path."""
-    name = str(model_path_or_name).lower()
-    if "t5" in name:
-        return "t5"
-    elif "bart" in name:
-        return "bart"
-    else:
-        raise ValueError(f"Cannot detect model type from path: {model_path_or_name}")
-
-
 def prepare_component_inputs(reviews, tokenizer, model_type="t5", max_len=512):
     """
     Tokenizes input reviews for component extraction phase.
@@ -80,7 +69,11 @@ def run_absa_pipeline(
     output_csv: str,
     component_model_path: str,
     absa_model_path: str,
+    component_model_type: str,
+    absa_model_type: str,
     max_len: int = 512,
+    batch_size: int = 8,
+    num_beams: int = 4,
 ):
     # Detect encoding of input CSV file
     with open(input_csv, "rb") as f:
@@ -94,12 +87,20 @@ def run_absa_pipeline(
     reviews = df["review"].fillna("").tolist()
 
     # Load models
-    component_predictor = Predictor(component_model_path)
-    absa_predictor = Predictor(absa_model_path)
-
-    # Detect model types
-    component_model_type = detect_model_type(component_model_path)
-    absa_model_type = detect_model_type(absa_model_path)
+    component_predictor = Predictor(
+        model_path=component_model_path,
+        model_type=component_model_type,
+        max_length=max_len,
+        batch_size=batch_size,
+        num_beams=num_beams
+    )
+    absa_predictor = Predictor(
+        model_path=absa_model_path,
+        model_type=absa_model_type,
+        max_length=max_len,
+        batch_size=1,  # predict_single
+        num_beams=num_beams
+    )
 
     # Prepare input for component prediction
     tokenized_dataset = prepare_component_inputs(

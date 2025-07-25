@@ -11,39 +11,40 @@ logger = logging.getLogger(__name__)
 
 # ===== Phase 1: Component Extraction =====
 def evaluate_component_outputs(predictions, references, output_file=None):
-    pred_set = set()
-    ref_set = set()
+    results = {}
 
-    for p in predictions:
-        pred_set.update([s.strip().lower() for s in p.split(";") if s.strip()])
-    for r in references:
-        ref_set.update([s.strip().lower() for s in r.split(";") if s.strip()])
+    # === (Optional) Commented out metrics ===
+    # pred_set = set()
+    # ref_set = set()
+    # for p in predictions:
+    #     pred_set.update([s.strip().lower() for s in p.split(";") if s.strip()])
+    # for r in references:
+    #     ref_set.update([s.strip().lower() for s in r.split(";") if s.strip()])
 
-    true_positives = len(pred_set & ref_set)
-    false_positives = len(pred_set - ref_set)
-    false_negatives = len(ref_set - pred_set)
+    # true_positives = len(pred_set & ref_set)
+    # false_positives = len(pred_set - ref_set)
+    # false_negatives = len(ref_set - pred_set)
 
-    precision = true_positives / (true_positives + false_positives + 1e-8)
-    recall = true_positives / (true_positives + false_negatives + 1e-8)
-    f1 = 2 * precision * recall / (precision + recall + 1e-8)
+    # precision = true_positives / (true_positives + false_positives + 1e-8)
+    # recall = true_positives / (true_positives + false_negatives + 1e-8)
+    # f1 = 2 * precision * recall / (precision + recall + 1e-8)
 
-    results = {
-        "precision": precision,
-        "recall": recall,
-        "f1": f1
-    }
+    # results = {
+    #     "precision": precision,
+    #     "recall": recall,
+    #     "f1": f1
+    # }
 
     if len(predictions) == len(references):
-        exact_match_acc = sum(p.strip() == r.strip() for p, r in zip(predictions, references)) / len(predictions)
-        results["exact_match"] = exact_match_acc
+        # exact_match_acc = sum(p.strip() == r.strip() for p, r in zip(predictions, references)) / len(predictions)
+        # results["exact_match"] = exact_match_acc
 
         rouge = evaluate.load("rouge")
         rouge_scores = rouge.compute(predictions=predictions, references=references)
 
-        logger.info("ROUGE Scores (only if lengths match):")
+        logger.info("ROUGE Scores:")
         for k, v in rouge_scores.items():
             logger.info(f"{k}: {v:.4f}")
-        logger.info(f"Exact Match: {exact_match_acc:.4f}")
 
         results.update(rouge_scores)
 
@@ -53,6 +54,7 @@ def evaluate_component_outputs(predictions, references, output_file=None):
         logger.info(f"Saved component evaluation results to {output_file}")
 
     return results
+
 
 def evaluate_component_outputs_by_sentence(predictions, references, output_file=None):
     assert len(predictions) == len(references), "Predictions and references must be same length"

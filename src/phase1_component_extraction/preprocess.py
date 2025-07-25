@@ -1,7 +1,7 @@
 from collections import defaultdict
 import torch
 
-def preprocess_component(batch, model_type="t5"):
+def preprocess_component(batch, model_type):
     """
     Prepare input-target pairs for component sentence extraction task.
     Supports both T5 and BART by adjusting prompt usage.
@@ -27,7 +27,7 @@ def preprocess_component(batch, model_type="t5"):
         target_text = " ; ".join(group["component_sentences"])
 
         if str(model_type).lower().startswith("t5"):
-            input_text = f"Extract component sentences: {full_review}"
+            input_text = f"Extract component sentences: {full_review}" #prompt for t5
         else:
             input_text = full_review  # No prompt for BART
 
