@@ -184,13 +184,16 @@ pip install -r requirements.txt
 * langdetect
 * nltk
 * beautifulsoup4
-* pandas, tqdm, seaborn, matplotlib
+* pandas, tqdm
 
-## Citation
 
-This project is part of the graduation thesis by:
+## 📚 Citation
 
-**Nguyễn Hải Ngọc Huyền**\\
+This project was developed as part of the undergraduate thesis by:
+
+**Nguyễn Hải Ngọc Huyền**
 **Tạ Hoàng Kim Thy**
-University of Science, VNU-HCM
-Major: Data Science, Class of 2025
+University of Science, Vietnam National University - Ho Chi Minh City (VNU-HCM)
+Major: Data Science — Class of 2025
+
+
